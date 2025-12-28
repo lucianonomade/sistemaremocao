@@ -56,6 +56,7 @@ export interface CreditList {
   id: string;
   resellerId: string;
   clientDocument?: string;
+  clientName?: string;
   startDate: string;
   manualConclusion: boolean;
   organs: OrganStatus;

@@ -17,6 +17,7 @@ const ListManager: React.FC<ListManagerProps> = ({ lists, setLists, currentUser,
   // Modal State
   const [isModalOpen, setIsModalOpen] = React.useState(false);
   const [newClientDoc, setNewClientDoc] = React.useState('');
+  const [newClientName, setNewClientName] = React.useState('');
   const [isLoading, setIsLoading] = React.useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
@@ -49,17 +50,19 @@ const ListManager: React.FC<ListManagerProps> = ({ lists, setLists, currentUser,
       const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
 
       let count = 0;
-      // Skip header, assume first column is CPF/Document
+      // Skip header, assume first column is CPF/Document, second is Name
       for (let i = 1; i < jsonData.length; i++) {
         const row: any = jsonData[i];
         const doc = row[0]?.toString().replace(/\D/g, '');
+        const name = row[1]?.toString() || '';
+
         if (doc && (doc.length === 11 || doc.length === 14)) {
           // Create List logic repeated
           try {
             const res = await fetch('/api/lists', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ resellerId: currentUser.id, clientDocument: doc })
+              body: JSON.stringify({ resellerId: currentUser.id, clientDocument: doc, clientName: name })
             });
             if (res.ok) {
               const newList = await res.json();
@@ -67,6 +70,7 @@ const ListManager: React.FC<ListManagerProps> = ({ lists, setLists, currentUser,
                 id: newList.id || `temp-${Date.now()}-${Math.random()}`,
                 resellerId: currentUser.id,
                 clientDocument: doc,
+                clientName: name,
                 startDate: new Date().toISOString(),
                 manualConclusion: false,
                 status: 'processing',
@@ -96,7 +100,7 @@ const ListManager: React.FC<ListManagerProps> = ({ lists, setLists, currentUser,
       const res = await fetch('/api/lists', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ resellerId: currentUser.id, clientDocument: newClientDoc })
+        body: JSON.stringify({ resellerId: currentUser.id, clientDocument: newClientDoc, clientName: newClientName })
       });
       if (!res.ok) throw new Error('Erro ao criar protocolo');
       const newList = await res.json();
@@ -106,6 +110,7 @@ const ListManager: React.FC<ListManagerProps> = ({ lists, setLists, currentUser,
         id: newList.id || `temp-${Date.now()}`,
         resellerId: currentUser.id,
         clientDocument: newClientDoc,
+        clientName: newClientName,
         startDate: new Date().toISOString(),
         manualConclusion: false,
         status: 'processing',
@@ -115,6 +120,7 @@ const ListManager: React.FC<ListManagerProps> = ({ lists, setLists, currentUser,
       setLists([formattedList, ...lists]);
       setIsModalOpen(false);
       setNewClientDoc('');
+      setNewClientName('');
       alert('Protocolo criado com sucesso!');
     } catch (err: any) {
       alert(err.message || 'Erro ao criar');
@@ -214,7 +220,7 @@ const ListManager: React.FC<ListManagerProps> = ({ lists, setLists, currentUser,
 
   return (
     <div className="space-y-8 animate-in pb-20">
-      <div className="bg-[#161B22] border border-[#30363D] p-6 rounded-3xl flex items-center justify-between shadow-2xl relative overflow-hidden group">
+      <div className="bg-[#161B22] border border-[#30363D] p-6 rounded-3xl flex flex-col md:flex-row items-center justify-between gap-6 shadow-2xl relative overflow-hidden group">
         <div className="absolute top-0 right-0 p-10 opacity-[0.03] group-hover:scale-125 transition-transform duration-1000">
           <TrendingUp size={140} />
         </div>
@@ -229,7 +235,7 @@ const ListManager: React.FC<ListManagerProps> = ({ lists, setLists, currentUser,
         </div>
 
         {hasControlAccess && (
-          <div className="flex gap-3 relative z-10">
+          <div className="flex flex-col sm:flex-row gap-3 relative z-10 w-full md:w-auto">
             <input
               type="file"
               ref={fileInputRef}
@@ -239,7 +245,7 @@ const ListManager: React.FC<ListManagerProps> = ({ lists, setLists, currentUser,
             />
             <button
               onClick={() => fileInputRef.current?.click()}
-              className="px-6 py-3 bg-[#1e2229] border border-[#30363D] hover:bg-[#252a33] text-[#8B949E] hover:text-white rounded-xl font-bold text-sm shadow-lg transition-all flex items-center gap-2 group/btn"
+              className="px-6 py-3 bg-[#1e2229] border border-[#30363D] hover:bg-[#252a33] text-[#8B949E] hover:text-white rounded-xl font-bold text-sm shadow-lg transition-all flex items-center justify-center gap-2 group/btn w-full sm:w-auto"
               disabled={isLoading}
             >
               <Upload size={18} className="group-hover/btn:scale-110 transition-transform" />
@@ -247,7 +253,7 @@ const ListManager: React.FC<ListManagerProps> = ({ lists, setLists, currentUser,
             </button>
             <button
               onClick={() => setIsModalOpen(true)}
-              className="px-6 py-3 bg-[#B8860B] hover:bg-[#9a7009] text-white rounded-xl font-bold text-sm shadow-lg shadow-[#B8860B]/20 transition-all flex items-center gap-2"
+              className="px-6 py-3 bg-[#B8860B] hover:bg-[#9a7009] text-white rounded-xl font-bold text-sm shadow-lg shadow-[#B8860B]/20 transition-all flex items-center justify-center gap-2 w-full sm:w-auto"
             >
               <Target size={18} /> Novo Protocolo
             </button>
@@ -265,9 +271,20 @@ const ListManager: React.FC<ListManagerProps> = ({ lists, setLists, currentUser,
 
             <form onSubmit={handleCreateList} className="space-y-4">
               <div className="space-y-2">
-                <label className="text-[10px] font-bold text-[#8B949E] uppercase ml-1">Documento (CPF/CNPJ)</label>
+                <label className="text-[10px] font-bold text-[#8B949E] uppercase ml-1">Nome do Cliente</label>
                 <input
                   autoFocus
+                  required
+                  type="text"
+                  value={newClientName}
+                  onChange={e => setNewClientName(e.target.value)}
+                  placeholder="Nome Completo"
+                  className="w-full bg-[#0D1117] border border-[#30363D] rounded-xl px-4 py-4 text-white font-bold focus:border-[#B8860B] outline-none"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold text-[#8B949E] uppercase ml-1">Documento (CPF/CNPJ)</label>
+                <input
                   required
                   type="text"
                   value={newClientDoc}
@@ -294,7 +311,8 @@ const ListManager: React.FC<ListManagerProps> = ({ lists, setLists, currentUser,
               <div className="flex justify-between items-start">
                 <div>
                   <span className="text-[10px] font-black text-[#B8860B] uppercase tracking-[0.2em]">Protocolo ID</span>
-                  <h4 className="text-4xl font-black text-white tracking-tighter">#{list.id.split('-')[1]}</h4>
+                  <h4 className="text-4xl font-black text-white tracking-tighter mb-1">#{list.id.split('-')[1]}</h4>
+                  <p className="text-sm font-bold text-gray-400 uppercase tracking-widest">{list.clientName || 'Cliente sem nome'}</p>
                 </div>
                 <div className="flex items-center gap-2">
                   <button

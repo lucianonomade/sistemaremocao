@@ -160,6 +160,7 @@ app.get('/api/lists', async (req, res) => {
     startDate: l.start_date,
     manualConclusion: l.manual_conclusion,
     status: l.status,
+    clientName: l.client_name,
     organs: {
       serasa: l.organs_status?.[0]?.serasa || false,
       boaVista: l.organs_status?.[0]?.boa_vista || false,
@@ -174,13 +175,14 @@ app.get('/api/lists', async (req, res) => {
 
 // Criar nova lista
 app.post('/api/lists', async (req, res) => {
-  const { resellerId, clientDocument } = req.body;
+  const { resellerId, clientDocument, clientName } = req.body;
 
   const { data, error } = await supabase
     .from('credit_lists')
     .insert([{
       reseller_id: resellerId,
       client_document: clientDocument,
+      client_name: clientName,
       status: 'processing',
       start_date: new Date().toISOString()
     }])
@@ -196,6 +198,7 @@ app.post('/api/lists', async (req, res) => {
     id: data.id,
     resellerId: data.reseller_id,
     clientDocument: data.client_document,
+    clientName: data.client_name,
     startDate: data.start_date,
     manualConclusion: data.manual_conclusion,
     status: data.status,
