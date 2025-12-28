@@ -1,7 +1,7 @@
 
 import React, { useState, useRef } from 'react';
 import { Wallet, Copy, CheckCircle2, QrCode, ExternalLink, ShieldCheck, Settings, Upload, Save, Link as LinkIcon, CreditCard, Landmark, Key, Download, FileText, Calculator, DollarSign, X, Loader2, User as UserIcon, Fingerprint, Smartphone } from 'lucide-react';
-import { User, Transaction, Reseller, CommissionPayout } from '../types';
+import { User, Transaction, Reseller, CommissionPayout, Plan } from '../types';
 
 interface FinanceProps {
   currentUser: User;
@@ -40,6 +40,26 @@ const Finance: React.FC<FinanceProps> = ({
   const [depositValue, setDepositValue] = useState('');
   const [pixData, setPixData] = useState<{ encodedImage: string, payload: string, paymentId: string } | null>(null);
   const [loadingPix, setLoadingPix] = useState(false);
+
+  // Plans Integration
+  const [availablePlans, setAvailablePlans] = useState<Plan[]>([]);
+  const [selectedPlanId, setSelectedPlanId] = useState<string>('');
+
+  React.useEffect(() => {
+    fetch('/api/plans')
+      .then(res => res.json())
+      .then(data => setAvailablePlans(Array.isArray(data) ? data : []))
+      .catch(err => console.error('Erro ao buscar planos:', err));
+  }, []);
+
+  const handlePlanSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const pId = e.target.value;
+    setSelectedPlanId(pId);
+    if (pId) {
+      const plan = availablePlans.find(p => p.id === pId);
+      if (plan) setDepositValue(plan.price.toString());
+    }
+  };
 
   React.useEffect(() => {
     if (subTab === 'commissions') {
@@ -102,7 +122,7 @@ const Finance: React.FC<FinanceProps> = ({
     alert('Copiado!');
   };
 
-  const handleRenewPix = async () => {
+  const handleRenewPix = async (price?: number) => {
     // Validate Document (CPF/CNPJ)
     const doc = currentUser.document?.replace(/\D/g, '') || '';
     if (doc.length !== 11 && doc.length !== 14) {
@@ -129,7 +149,8 @@ const Finance: React.FC<FinanceProps> = ({
       }
 
       // 2. GENERATE PIX
-      const amount = 29.90; // Default Renewal Price
+      // Use passed price OR fallback to 29.90
+      const amount = price || 29.90;
       const res = await fetch('/api/asaas/create-pix-charge', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -612,14 +633,22 @@ const Finance: React.FC<FinanceProps> = ({
 
               <div className="space-y-3">
                 <p className="text-[10px] text-[#484F58] font-bold uppercase text-center">Precisa renovar ou fazer um upgrade?</p>
-                <button
-                  onClick={handleRenewPix}
-                  disabled={loadingPix}
-                  className="w-full bg-[#161B22] border border-[#B8860B] text-[#B8860B] hover:bg-[#B8860B] hover:text-white py-4 rounded-xl font-black text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-2"
-                >
-                  {loadingPix ? <Loader2 className="animate-spin" size={16} /> : <QrCode size={18} />}
-                  {loadingPix ? 'Gerando PIX...' : 'Gerar PIX de Renovação (R$ 29,90)'}
-                </button>
+                {(() => {
+                  // Find the "Mensal" plan or the first available plan to use as default price
+                  const defaultPlan = availablePlans.find(p => p.name.toLowerCase().includes('mensal')) || availablePlans[0];
+                  const renewalPrice = defaultPlan ? defaultPlan.price : 29.90; // Fallback to 29.90 only if no plans exist
+
+                  return (
+                    <button
+                      onClick={() => handleRenewPix(renewalPrice)} // Pass dynamic price
+                      disabled={loadingPix}
+                      className="w-full bg-[#161B22] border border-[#B8860B] text-[#B8860B] hover:bg-[#B8860B] hover:text-white py-4 rounded-xl font-black text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-2"
+                    >
+                      {loadingPix ? <Loader2 className="animate-spin" size={16} /> : <QrCode size={18} />}
+                      {loadingPix ? 'Gerando PIX...' : `Gerar PIX de Renovação (R$ ${renewalPrice.toLocaleString('pt-BR', { minimumFractionDigits: 2 })})`}
+                    </button>
+                  );
+                })()}
               </div>
             </div>
 
@@ -636,7 +665,7 @@ const Finance: React.FC<FinanceProps> = ({
             <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
               <div className="bg-[#161B22] border border-[#30363D] w-full max-w-md rounded-3xl p-8 relative animate-in zoom-in-50 duration-200">
                 <button
-                  onClick={() => { setShowDepositModal(false); setPixData(null); setDepositValue(''); }}
+                  onClick={() => { setShowDepositModal(false); setPixData(null); setDepositValue(''); setSelectedPlanId(''); }}
                   className="absolute top-6 right-6 text-[#8B949E] hover:text-white transition-colors"
                 >
                   <X size={20} />
@@ -653,6 +682,20 @@ const Finance: React.FC<FinanceProps> = ({
                 {!pixData ? (
                   <div className="space-y-6">
                     <div>
+                      <label className="text-[10px] uppercase font-black text-[#8B949E] ml-2 mb-2 block">Selecione um Plano (Opcional)</label>
+                      <select
+                        className="w-full bg-[#0D1117] border border-[#30363D] rounded-xl px-4 py-3 text-white text-xs font-bold focus:border-[#B8860B] outline-none mb-4"
+                        value={selectedPlanId}
+                        onChange={handlePlanSelect}
+                      >
+                        <option value="">-- Inserir Valor Manualmente --</option>
+                        {availablePlans.map(plan => (
+                          <option key={plan.id} value={plan.id}>
+                            {plan.name} - R$ {plan.price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          </option>
+                        ))}
+                      </select>
+
                       <label className="text-[10px] uppercase font-black text-[#8B949E] ml-2 mb-2 block">Valor da Recarga (R$)</label>
                       <div className="relative">
                         <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#8B949E] font-bold">R$</span>

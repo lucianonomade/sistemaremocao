@@ -253,13 +253,76 @@ const App: React.FC = () => {
           )}
           {currentUser.role !== 'admin' && (
             <>
-              <SidebarLink icon={FileText} label="Meus Protocolos" tabId="lists" />
-              <SidebarLink icon={ShoppingBag} label="Loja e Serviços" tabId="services" />
-              <SidebarLink icon={Settings} label="Planos de Comissão" tabId="plans" />
+              {(() => {
+                // EXPIRED CHECK (Not just trial check)
+                const hasExpiry = currentUser.expiryDate && !isNaN(new Date(currentUser.expiryDate).getTime());
+                const isExpired = !hasExpiry || new Date(currentUser.expiryDate!).getTime() < new Date().getTime();
+
+                // If EXPIRED, Block protocols to force payment.
+                // If TRIAL (Active but No Plan), ALLOW protocols.
+                if (isExpired) {
+                  return (
+                    <div className="opacity-50 pointer-events-none relative group">
+                      <SidebarLink icon={FileText} label="Meus Protocolos" tabId="ignore" />
+                      <div className="absolute right-4 top-3 text-[10px] font-black uppercase text-red-500 tracking-widest bg-[#161B22] px-2 py-0.5 rounded border border-red-500/30">Vencido</div>
+                    </div>
+                  );
+                }
+                return <SidebarLink icon={FileText} label="Meus Protocolos" tabId="lists" />;
+              })()}
+
+              {(() => {
+                const hasExpiry = currentUser.expiryDate && !isNaN(new Date(currentUser.expiryDate).getTime());
+                const isExpired = !hasExpiry || new Date(currentUser.expiryDate!).getTime() < new Date().getTime();
+                const isPaidPlan = !!currentUser.planId;
+
+                // Block if Expired OR if Trial (No Paid Plan)
+                // User said: "bloqueie tudo menos painel e meus protocolos" during trial (7 days).
+                // So if !isPaidPlan (Trial) -> Block these too.
+                const shouldBlock = isExpired || !isPaidPlan;
+
+                if (shouldBlock) {
+                  return (
+                    <>
+                      <div className="opacity-50 pointer-events-none relative group">
+                        <SidebarLink icon={ShoppingBag} label="Loja e Serviços" tabId="ignore" />
+                        <div className="absolute right-4 top-3 text-[10px] font-black uppercase text-[#B8860B] tracking-widest bg-[#161B22] px-2 py-0.5 rounded border border-[#B8860B]/30">{isExpired ? 'Vencido' : 'Premium'}</div>
+                      </div>
+                      <div className="opacity-50 pointer-events-none relative group">
+                        <SidebarLink icon={Settings} label="Planos de Comissão" tabId="ignore" />
+                        <div className="absolute right-4 top-3 text-[10px] font-black uppercase text-[#B8860B] tracking-widest bg-[#161B22] px-2 py-0.5 rounded border border-[#B8860B]/30">{isExpired ? 'Vencido' : 'Premium'}</div>
+                      </div>
+                    </>
+                  );
+                }
+                return (
+                  <>
+                    <SidebarLink icon={ShoppingBag} label="Loja e Serviços" tabId="services" />
+                    <SidebarLink icon={Settings} label="Planos de Comissão" tabId="plans" />
+                  </>
+                );
+              })()}
 
               <SidebarLink sectionTitle label="Financeiro" />
               <SidebarLink icon={Wallet} label="Depósitos" tabId="finance-deposits" />
-              <SidebarLink icon={History} label="Extrato Detalhado" tabId="finance" />
+
+              {(() => {
+                const hasExpiry = currentUser.expiryDate && !isNaN(new Date(currentUser.expiryDate).getTime());
+                const isExpired = !hasExpiry || new Date(currentUser.expiryDate!).getTime() < new Date().getTime();
+                const isPaidPlan = !!currentUser.planId;
+
+                const shouldBlock = isExpired || !isPaidPlan;
+
+                if (shouldBlock) {
+                  return (
+                    <div className="opacity-50 pointer-events-none relative group">
+                      <SidebarLink icon={History} label="Extrato Detalhado" tabId="ignore" />
+                      <div className="absolute right-4 top-3 text-[10px] font-black uppercase text-[#B8860B] tracking-widest bg-[#161B22] px-2 py-0.5 rounded border border-[#B8860B]/30">{isExpired ? 'Vencido' : 'Premium'}</div>
+                    </div>
+                  );
+                }
+                return <SidebarLink icon={History} label="Extrato Detalhado" tabId="finance" />;
+              })()}
 
               <SidebarLink sectionTitle label="Outros" />
               {(() => {
@@ -463,14 +526,39 @@ const App: React.FC = () => {
           {activeTab === 'dashboard' && <DashboardHome stats={stats} lists={lists} currentUser={currentUser} setCurrentUser={setCurrentUser} onNavigate={setActiveTab} />}
 
           <div className={activeTab === 'dashboard' ? 'hidden' : 'p-6 animate-in fade-in duration-300 h-full'}>
-            {activeTab === 'lists' && (
-              <ListManager
-                lists={lists}
-                setLists={setLists}
-                currentUser={currentUser}
-                resellers={resellers}
-              />
-            )}
+            {activeTab === 'lists' && (() => {
+              // Strict Expiry Check for Component Access
+              if (currentUser.role === 'admin') {
+                return (
+                  <ListManager
+                    lists={lists}
+                    setLists={setLists}
+                    currentUser={currentUser}
+                    resellers={resellers}
+                  />
+                );
+              }
+
+              const hasExpiry = currentUser.expiryDate && !isNaN(new Date(currentUser.expiryDate).getTime());
+              const isExpired = !hasExpiry || new Date(currentUser.expiryDate!).getTime() < new Date().getTime();
+
+              if (isExpired) return (
+                <div className="flex flex-col items-center justify-center h-full text-center space-y-4 animate-fade-in text-gray-400">
+                  <ShieldAlert size={64} className="text-red-500 mb-2" />
+                  <h2 className="text-2xl font-bold text-white">Acesso Bloqueado</h2>
+                  <p className="max-w-md">Sua licença expirou. Renove seu plano no menu Financeiro para acessar seus protocolos.</p>
+                </div>
+              );
+
+              return (
+                <ListManager
+                  lists={lists}
+                  setLists={setLists}
+                  currentUser={currentUser}
+                  resellers={resellers}
+                />
+              );
+            })()}
             {activeTab === 'resellers' && currentUser.role === 'admin' && (
               <ResellerManager
                 resellers={resellers}

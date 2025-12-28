@@ -98,7 +98,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin, onRegister, resellers,
         };
         onLogin(user);
       } else {
-        alert('Cadastro realizado com sucesso! Aguarde a aprovação do administrador.');
+        alert('Cadastro realizado com sucesso! Seu acesso já está liberado. Faça login para começar seu Teste Grátis.');
         setAuthType('login');
       }
     } catch (error: any) {
