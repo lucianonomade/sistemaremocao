@@ -269,6 +269,16 @@ const App: React.FC = () => {
                 // 3. Must have a confirmed planId (Paid) OR be explicitly Admin
                 // If just "Active" but no planId => It's a trial/free user => BLOCKED.
 
+                // Admin bypasses ALL checks
+                if (currentUser.role === 'admin') {
+                  return (
+                    <>
+                      <SidebarLink icon={Wrench} label="Ferramentas" tabId="tools" />
+                      <SidebarLink icon={ImageIcon} label="Criativos" tabId="creatives" />
+                    </>
+                  );
+                }
+
                 const hasExpiry = currentUser.expiryDate && !isNaN(new Date(currentUser.expiryDate).getTime());
                 const isExpired = !hasExpiry || new Date(currentUser.expiryDate!).getTime() < new Date().getTime();
                 const isPaidPlan = !!currentUser.planId;
@@ -497,17 +507,21 @@ const App: React.FC = () => {
               <Queries />
             )}
             {activeTab === 'creatives' && (() => {
+              if (currentUser.role === 'admin') return <CreativesManager currentUser={currentUser} />;
+
               const hasExpiry = currentUser.expiryDate && !isNaN(new Date(currentUser.expiryDate).getTime());
               const isExpired = !hasExpiry || new Date(currentUser.expiryDate!).getTime() < new Date().getTime();
               const isPaidPlan = !!currentUser.planId;
-              const canAccess = !isExpired && isPaidPlan && (currentUser.status === 'active' || currentUser.role === 'admin');
+              const canAccess = !isExpired && isPaidPlan && currentUser.status === 'active';
               return canAccess ? <CreativesManager currentUser={currentUser} /> : null;
             })()}
             {activeTab === 'tools' && (() => {
+              if (currentUser.role === 'admin') return <ToolsManager currentUser={currentUser} />;
+
               const hasExpiry = currentUser.expiryDate && !isNaN(new Date(currentUser.expiryDate).getTime());
               const isExpired = !hasExpiry || new Date(currentUser.expiryDate!).getTime() < new Date().getTime();
               const isPaidPlan = !!currentUser.planId;
-              const canAccess = !isExpired && isPaidPlan && (currentUser.status === 'active' || currentUser.role === 'admin');
+              const canAccess = !isExpired && isPaidPlan && currentUser.status === 'active';
               return canAccess ? <ToolsManager currentUser={currentUser} /> : null;
             })()}
             {activeTab === 'support' && (
