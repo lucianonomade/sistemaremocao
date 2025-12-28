@@ -2,7 +2,7 @@
 import React from 'react';
 import { Clock, CheckCircle2, ListChecks, Calendar, ShieldCheck, UserCheck, Share2, Target, AlertCircle, TrendingUp, Upload } from 'lucide-react';
 import { CreditList, User, OrganStatus, Reseller } from '../types';
-import { calculateListProgress } from '../utils/progress';
+import { calculateListProgress, calculateOrganProgress } from '../utils/progress';
 // Dynamic import used in handleFileUpload
 
 
@@ -347,11 +347,11 @@ const ListManager: React.FC<ListManagerProps> = ({ lists, setLists, currentUser,
               </div>
 
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                <OrganProgressBar disabled={!hasControlAccess} active={list.organs.serasa} label="Serasa" progress={calculateListProgress(list.startDate, false, { ...list.organs, serasa: false, boaVista: false, spc: false, cenprotNacional: false, cenprotSP: false })} onClick={() => toggleOrgan(list.id, 'serasa')} />
-                <OrganProgressBar disabled={!hasControlAccess} active={list.organs.boaVista} label="Boa Vista" progress={calculateListProgress(list.startDate, false, { ...list.organs, serasa: false, boaVista: false, spc: false, cenprotNacional: false, cenprotSP: false })} onClick={() => toggleOrgan(list.id, 'boaVista')} />
-                <OrganProgressBar disabled={!hasControlAccess} active={list.organs.spc} label="SPC" progress={calculateListProgress(list.startDate, false, { ...list.organs, serasa: false, boaVista: false, spc: false, cenprotNacional: false, cenprotSP: false })} onClick={() => toggleOrgan(list.id, 'spc')} />
-                <OrganProgressBar disabled={!hasControlAccess} active={list.organs.cenprotNacional} label="Cenprot Nac." progress={calculateListProgress(list.startDate, false, { ...list.organs, serasa: false, boaVista: false, spc: false, cenprotNacional: false, cenprotSP: false })} onClick={() => toggleOrgan(list.id, 'cenprotNacional')} />
-                <OrganProgressBar disabled={!hasControlAccess} active={list.organs.cenprotSP} label="Cenprot SP" progress={calculateListProgress(list.startDate, false, { ...list.organs, serasa: false, boaVista: false, spc: false, cenprotNacional: false, cenprotSP: false })} onClick={() => toggleOrgan(list.id, 'cenprotSP')} />
+                <OrganProgressBar disabled={!hasControlAccess} active={list.organs.serasa} label="Serasa" progress={calculateOrganProgress(list.startDate, list.organs.serasa, 0)} onClick={() => toggleOrgan(list.id, 'serasa')} />
+                <OrganProgressBar disabled={!hasControlAccess} active={list.organs.boaVista} label="Boa Vista" progress={calculateOrganProgress(list.startDate, list.organs.boaVista, 1)} onClick={() => toggleOrgan(list.id, 'boaVista')} />
+                <OrganProgressBar disabled={!hasControlAccess} active={list.organs.spc} label="SPC" progress={calculateOrganProgress(list.startDate, list.organs.spc, 2)} onClick={() => toggleOrgan(list.id, 'spc')} />
+                <OrganProgressBar disabled={!hasControlAccess} active={list.organs.cenprotNacional} label="Cenprot Nac." progress={calculateOrganProgress(list.startDate, list.organs.cenprotNacional, 3)} onClick={() => toggleOrgan(list.id, 'cenprotNacional')} />
+                <OrganProgressBar disabled={!hasControlAccess} active={list.organs.cenprotSP} label="Cenprot SP" progress={calculateOrganProgress(list.startDate, list.organs.cenprotSP, 4)} onClick={() => toggleOrgan(list.id, 'cenprotSP')} />
               </div>
 
               <div className="pt-4 border-t border-[#30363D]/50 space-y-4">

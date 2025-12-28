@@ -62,14 +62,19 @@ app.post('/api/auth/login', async (req, res) => {
       .select('*')
       .eq('email', email)
       .eq('password', password)
-      .single();
+      .maybeSingle();
 
-    if (profileError || !profile) {
-      console.error('Login manual falhou:', profileError?.message);
+    if (profileError) {
+      console.error('SERVER DEBUG: Login manual falhou (erro de query):', profileError.message);
+      return res.status(500).json({ error: 'Erro no servidor ao tentar login manual' });
+    }
+
+    if (!profile) {
+      console.log('SERVER DEBUG: Login manual falhou: Usuário não encontrado ou senha incorreta.');
       return res.status(401).json({ error: 'Credenciais inválidas' });
     }
 
-    console.log('Login manual bem-sucedido para:', email);
+    console.log('SERVER DEBUG: Login manual bem-sucedido para:', email);
     return res.json({ user: { id: profile.id, email: profile.email }, profile });
   }
 
@@ -78,10 +83,14 @@ app.post('/api/auth/login', async (req, res) => {
     .from('profiles')
     .select('*')
     .eq('id', authData.user.id)
-    .single();
+    .maybeSingle();
 
   if (profileError) {
-    console.error('Erro ao buscar perfil:', profileError.message);
+    console.error('SERVER DEBUG: Erro ao buscar perfil detalhado:', profileError.message);
+  }
+
+  if (!profile) {
+    console.warn('SERVER DEBUG: Perfil não encontrado para o usuário logado:', authData.user.id);
   }
 
   console.log('Login oficial bem-sucedido:', email);
@@ -187,9 +196,16 @@ app.post('/api/lists', async (req, res) => {
       start_date: new Date().toISOString()
     }])
     .select()
-    .single();
+    .maybeSingle();
 
-  if (error) return res.status(400).json({ error: error.message });
+  if (error) {
+    console.error('SERVER DEBUG: Erro ao criar protocolo:', error.message);
+    return res.status(400).json({ error: error.message });
+  }
+
+  if (!data) {
+    return res.status(400).json({ error: 'Falha ao criar e recuperar o protocolo.' });
+  }
 
   // Criar status inicial dos órgãos
   await supabase.from('organs_status').insert([{ list_id: data.id }]);
@@ -209,7 +225,7 @@ app.post('/api/lists', async (req, res) => {
 // --- ROTAS DE CONFIGURAÇÕES ---
 
 app.get('/api/settings', async (req, res) => {
-  const { data, error } = await supabase.from('platform_settings').select('*').single();
+  const { data, error } = await supabase.from('platform_settings').select('*').maybeSingle();
   if (error) return res.status(400).json({ error: error.message });
   res.json({
     pixKey: data.pix_key,
@@ -230,7 +246,7 @@ app.patch('/api/settings', async (req, res) => {
     })
     .eq('id', 'global')
     .select()
-    .single();
+    .maybeSingle();
 
   if (error) return res.status(400).json({ error: error.message });
   res.json({
@@ -260,7 +276,7 @@ app.post('/api/plans', async (req, res) => {
     .from('plans')
     .insert([{ name, price, commission_rate: commissionRate, description }])
     .select()
-    .single();
+    .maybeSingle();
 
   if (error) return res.status(400).json({ error: error.message });
   res.json(data);
@@ -273,7 +289,7 @@ app.patch('/api/plans/:id', async (req, res) => {
     .update({ name, price, commission_rate: commissionRate, description })
     .eq('id', req.params.id)
     .select()
-    .single();
+    .maybeSingle();
 
   if (error) return res.status(400).json({ error: error.message });
   res.json(data);
@@ -368,7 +384,7 @@ app.post('/api/resellers', async (req, res) => {
         usage_days: usageDays
       }])
       .select()
-      .single();
+      .maybeSingle();
 
     if (profileError) throw profileError;
 
@@ -410,7 +426,7 @@ app.patch('/api/resellers/:id', async (req, res) => {
     })
     .eq('id', req.params.id)
     .select()
-    .single();
+    .maybeSingle();
 
   if (error) {
     console.error('DEBUG: Erro ao atualizar revendedor no Supabase:', error);
@@ -471,7 +487,7 @@ app.post('/api/services', async (req, res) => {
       price: price || 0
     }])
     .select()
-    .single();
+    .maybeSingle();
 
   if (error) return res.status(400).json({ error: error.message });
   res.json({
@@ -494,7 +510,7 @@ app.post('/api/store/purchase', async (req, res) => {
     .from('profiles')
     .select('balance')
     .eq('id', resellerId)
-    .single();
+    .maybeSingle();
 
   if (profileError || !profile) return res.status(400).json({ error: 'Perfil não encontrado' });
 
@@ -503,7 +519,7 @@ app.post('/api/store/purchase', async (req, res) => {
     .from('services')
     .select('*')
     .eq('id', serviceId)
-    .single();
+    .maybeSingle();
 
   if (serviceError || !service) return res.status(400).json({ error: 'Serviço não encontrado' });
 
@@ -569,7 +585,7 @@ app.patch('/api/transactions/:id/confirm', async (req, res) => {
     .from('transactions')
     .select('*')
     .eq('id', id)
-    .single();
+    .maybeSingle();
 
   if (txError || !tx) return res.status(404).json({ error: 'Transação não encontrada' });
   if (tx.status === 'completed') return res.status(400).json({ error: 'Transação já foi confirmada' });
@@ -588,7 +604,7 @@ app.patch('/api/transactions/:id/confirm', async (req, res) => {
       .from('profiles')
       .select('balance')
       .eq('id', tx.reseller_id)
-      .single();
+      .maybeSingle();
 
     const newBalance = parseFloat(profile.balance || 0) + parseFloat(tx.amount);
 
@@ -683,7 +699,7 @@ app.post('/api/commission-payouts', async (req, res) => {
     period,
     receipt_base64: receiptBase64,
     status: 'paid'
-  }).select().single();
+  }).select().maybeSingle();
 
   if (error) return res.status(400).json({ error: error.message });
 
@@ -794,7 +810,7 @@ app.patch('/api/resellers/:id', async (req, res) => {
     .from('profiles')
     .select('*')
     .eq('id', id)
-    .single();
+    .maybeSingle();
 
   if (selectError && selectError.code !== 'PGRST116') {
     console.error('Erro no SELECT:', selectError);
@@ -884,7 +900,7 @@ app.post('/api/asaas/create-pix-charge', async (req, res) => {
     const { userId, amount, type = 'deposit', customerData } = req.body;
 
     // 1. Get User
-    const { data: profile } = await supabase.from('profiles').select('*').eq('id', userId).single();
+    const { data: profile } = await supabase.from('profiles').select('*').eq('id', userId).maybeSingle();
     if (!profile) return res.status(404).json({ error: 'Usuário não encontrado' });
 
     // 2. Create pending transaction
@@ -895,7 +911,7 @@ app.post('/api/asaas/create-pix-charge', async (req, res) => {
       status: 'pending',
       description: type === 'plan' ? 'Renovação de Plano' : 'Recarga via PIX (Asaas)',
       date: new Date().toISOString()
-    }).select().single();
+    }).select().maybeSingle();
 
     if (txError) throw txError;
 
@@ -950,14 +966,14 @@ app.post('/api/asaas/webhook', async (req, res) => {
     const txId = payment.externalReference;
     if (txId) {
       // Confirm Transaction
-      const { data: tx } = await supabase.from('transactions').select('*').eq('id', txId).single();
+      const { data: tx } = await supabase.from('transactions').select('*').eq('id', txId).maybeSingle();
 
       if (tx && tx.status !== 'completed') {
         // Update Transaction
         await supabase.from('transactions').update({ status: 'completed' }).eq('id', txId);
 
         // Update Balance
-        const { data: profile } = await supabase.from('profiles').select('balance').eq('id', tx.reseller_id).single();
+        const { data: profile } = await supabase.from('profiles').select('balance').eq('id', tx.reseller_id).maybeSingle();
         const newBalance = (parseFloat(profile.balance) || 0) + parseFloat(tx.amount);
         await supabase.from('profiles').update({ balance: newBalance }).eq('id', tx.reseller_id);
       }
@@ -982,7 +998,7 @@ app.get('/api/asaas/check-payment/:paymentId', async (req, res) => {
       // Activate logic similar to webhook
       const txId = payment.externalReference;
       if (txId) {
-        const { data: tx } = await supabase.from('transactions').select('*').eq('id', txId).single();
+        const { data: tx } = await supabase.from('transactions').select('*').eq('id', txId).maybeSingle();
 
         if (tx && tx.status !== 'completed') {
           await supabase.from('transactions').update({ status: 'completed' }).eq('id', txId);
@@ -999,7 +1015,7 @@ app.get('/api/asaas/check-payment/:paymentId', async (req, res) => {
             }).eq('id', tx.reseller_id);
           } else {
             // DEPOSIT
-            const { data: profile } = await supabase.from('profiles').select('balance').eq('id', tx.reseller_id).single();
+            const { data: profile } = await supabase.from('profiles').select('balance').eq('id', tx.reseller_id).maybeSingle();
             const newBalance = (parseFloat(profile.balance) || 0) + parseFloat(tx.amount);
             await supabase.from('profiles').update({ balance: newBalance }).eq('id', tx.reseller_id);
           }
@@ -1064,7 +1080,7 @@ app.post('/api/creatives', async (req, res) => {
     .from('creatives')
     .insert([{ name, category, type, url, thumbnail }])
     .select()
-    .single();
+    .maybeSingle();
 
   if (error) return res.status(400).json({ error: error.message });
   res.json(data);

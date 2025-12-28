@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { TrendingUp, LogOut, CheckCircle2, MessageCircle, ShieldCheck } from 'lucide-react';
 import { User, CreditList, Reseller, ServiceCard } from '../types';
-import { calculateListProgress } from '../utils/progress';
+import { calculateListProgress, calculateOrganProgress } from '../utils/progress';
 
 interface ClientPortalProps {
   currentUser: User;
@@ -75,54 +75,45 @@ const ClientPortal: React.FC<ClientPortalProps> = ({ currentUser, onLogout, list
         {/* Status Card */}
         <div className="w-full bg-[#161B22]/80 backdrop-blur-md rounded-3xl border border-gray-800 shadow-2xl overflow-hidden animate-in slide-in-from-bottom-8 duration-700 delay-100">
 
-          {/* Progress Header */}
-          <div className="p-6 md:p-8 border-b border-gray-800">
-            <div className="flex justify-between items-end mb-6">
-              <div>
-                <p className="text-[10px] font-bold tracking-wider text-gray-500 uppercase mb-2">Evolução Sistêmica</p>
-                <div className={`inline-flex items-center px-2 py-1 rounded border ${progress === 100 ? 'bg-green-900/30 border-green-800' : 'bg-blue-900/30 border-blue-800'}`}>
-                  <span className={`w-1.5 h-1.5 rounded-full mr-2 animate-pulse ${progress === 100 ? 'bg-green-500' : 'bg-blue-500'}`}></span>
-                  <span className={`text-[10px] font-bold uppercase tracking-wide ${progress === 100 ? 'text-green-400' : 'text-blue-400'}`}>
-                    {progress === 100 ? 'Processo Finalizado' : 'Em Andamento'}
-                  </span>
-                </div>
-              </div>
-              <div className="text-right">
-                <span className="font-black italic text-5xl text-white leading-none block">{progress}%</span>
-                <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block mt-1">Concluído</span>
-              </div>
-            </div>
-
-            {/* Progress Bar */}
-            <div className="relative w-full h-3 bg-gray-800 rounded-full overflow-hidden">
-              <div
-                className={`absolute top-0 left-0 h-full rounded-full transition-all duration-[1500ms] ease-out ${progress >= 90 ? 'bg-[#F59E0B] shadow-[0_0_15px_rgba(245,158,11,0.5)]' : 'bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.5)]'}`}
-                style={{ width: `${progress}%` }}
-              ></div>
-            </div>
-          </div>
-
           {/* Organs List */}
           <div className="p-6 md:p-8 space-y-3 bg-[#11141c]">
             {[
-              { name: 'SERASA EXPERIAN', completed: list?.organs.serasa },
-              { name: 'BOA VISTA SCPC', completed: list?.organs.boaVista },
-              { name: 'SPC BRASIL', completed: list?.organs.spc },
-              { name: 'CENPROT NACIONAL', completed: list?.organs.cenprotNacional },
-              { name: 'CENPROT SP (CARTÓRIOS)', completed: list?.organs.cenprotSP }
-            ].map((organ, idx) => (
-              <div key={idx} className="group flex items-center justify-between p-4 bg-[#1F2937] rounded-xl border border-gray-700 hover:border-[#F59E0B]/50 transition-all duration-300 hover:shadow-lg hover:-translate-y-1 cursor-default">
-                <div className="flex items-center gap-4">
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-transform group-hover:scale-110 ${organ.completed ? 'bg-green-900/20 text-green-500' : 'bg-gray-800 text-gray-500'}`}>
-                    {organ.completed ? <CheckCircle2 size={20} /> : <ShieldCheck size={20} />}
+              { name: 'SERASA', completed: list?.organs.serasa, key: 'serasa' as const },
+              { name: 'BOA VISTA SCPC', completed: list?.organs.boaVista, key: 'boaVista' as const },
+              { name: 'SPC BRASIL', completed: list?.organs.spc, key: 'spc' as const },
+              { name: 'CENPROT NACIONAL', completed: list?.organs.cenprotNacional, key: 'cenprotNacional' as const },
+              { name: 'CENPROT SP (CARTÓRIOS)', completed: list?.organs.cenprotSP, key: 'cenprotSP' as const }
+            ].map((organ, idx) => {
+              const organProgress = list ? calculateOrganProgress(list.startDate, organ.completed || false, idx) : 0;
+              return (
+                <div key={idx} className="group flex flex-col p-4 bg-[#1F2937] rounded-xl border border-gray-700 hover:border-[#F59E0B]/50 transition-all duration-300 hover:shadow-lg cursor-default">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-4">
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-transform group-hover:scale-110 ${organ.completed ? 'bg-green-900/20 text-green-500' : 'bg-gray-800 text-gray-500'}`}>
+                        {organ.completed ? <CheckCircle2 size={20} /> : <ShieldCheck size={20} />}
+                      </div>
+                      <span className="font-bold text-sm tracking-wide text-gray-200 uppercase">{organ.name}</span>
+                    </div>
+                    <span className={`px-3 py-1 rounded-md text-[10px] font-bold border uppercase tracking-wider ${organ.completed ? 'bg-green-900/20 text-green-400 border-green-900/30' : 'bg-gray-800 text-gray-500 border-gray-700'}`}>
+                      {organ.completed ? 'Baixado' : 'Aguardando'}
+                    </span>
                   </div>
-                  <span className="font-bold text-sm tracking-wide text-gray-200 uppercase">{organ.name}</span>
+
+                  {/* Individual Organ Progress Bar */}
+                  <div className="flex items-center gap-3">
+                    <div className="flex-1 h-2 bg-gray-800 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all duration-1000 ${organ.completed ? 'bg-green-500' : organProgress >= 90 ? 'bg-[#F59E0B]' : 'bg-blue-500'}`}
+                        style={{ width: `${organProgress}%` }}
+                      ></div>
+                    </div>
+                    <span className={`text-xs font-black ${organ.completed ? 'text-green-500' : 'text-gray-400'}`}>
+                      {organProgress}%
+                    </span>
+                  </div>
                 </div>
-                <span className={`px-3 py-1 rounded-md text-[10px] font-bold border uppercase tracking-wider ${organ.completed ? 'bg-green-900/20 text-green-400 border-green-900/30' : 'bg-gray-800 text-gray-500 border-gray-700'}`}>
-                  {organ.completed ? 'Baixado' : 'Aguardando'}
-                </span>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 
