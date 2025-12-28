@@ -17,7 +17,11 @@ import {
   ShoppingBag,
   PieChart,
   Calendar,
-  Wrench
+  Wrench,
+  Clock,
+  ShieldAlert,
+  QrCode,
+  Save
 } from 'lucide-react';
 import { User, Reseller, CreditList, Transaction, Plan, ServiceCard } from './types';
 import AuthScreen from './components/AuthScreen';
@@ -282,8 +286,33 @@ const App: React.FC = () => {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col overflow-hidden relative bg-[#0A0A0C]">
-        <header className="h-20 bg-[#0A0A0C] border-b border-white/5 flex items-center justify-between px-8 z-10 flex-shrink-0">
+      <div className="flex-1 flex flex-col min-w-0 bg-[#0A0A0C] relative">
+
+        {/* Trial / Expiry Banner */}
+        {currentUser.role === 'reseller' && (
+          <div className={`w-full py-2 px-6 flex items-center justify-center gap-4 text-[10px] font-black uppercase tracking-[0.2em] z-[60] shadow-2xl ${(() => {
+            const expiry = new Date(currentUser.expiryDate || '');
+            const today = new Date();
+            const diff = expiry.getTime() - today.getTime();
+            const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
+            return days <= 3 ? 'bg-red-600 text-white animate-pulse' : 'bg-[#B8860B] text-white';
+          })()
+            }`}>
+            <span className="flex items-center gap-2">
+              <Clock size={14} />
+              {(() => {
+                const expiry = new Date(currentUser.expiryDate || '');
+                const today = new Date();
+                const diff = expiry.getTime() - today.getTime();
+                const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
+                return days <= 0 ? 'Sua licença expirou! Renove agora para continuar usando.' :
+                  `Atenção: Você tem ${days} ${days === 1 ? 'dia restante' : 'dias restantes'} de acesso gratuito.`;
+              })()}
+            </span>
+          </div>
+        )}
+
+        <header className="h-20 border-b border-white/5 bg-[#0D0D0F]/80 backdrop-blur-xl px-8 flex items-center justify-between sticky top-0 z-50">
           <div className="flex items-center gap-4">
             <button className="lg:hidden text-gray-400 hover:text-white" onClick={() => setSidebarOpen(true)}>
               <Menu size={24} />
@@ -318,6 +347,61 @@ const App: React.FC = () => {
         </header>
 
         <div className="flex-1 overflow-y-auto relative scrollbar-none">
+          {currentUser.role === 'reseller' && (() => {
+            const expiry = new Date(currentUser.expiryDate || '');
+            const today = new Date();
+            if (expiry.getTime() < today.getTime()) {
+              return (
+                <div className="absolute inset-0 z-[100] bg-[#0A0A0C]/95 backdrop-blur-xl flex items-center justify-center p-6 text-center">
+                  <div className="max-w-md w-full space-y-8 animate-in zoom-in-95 duration-500">
+                    <div className="w-24 h-24 bg-red-500/10 text-red-500 rounded-[2rem] flex items-center justify-center mx-auto border border-red-500/20 shadow-2xl shadow-red-500/10">
+                      <ShieldAlert size={48} />
+                    </div>
+                    <div className="space-y-3">
+                      <h2 className="text-4xl font-black text-white uppercase tracking-tighter">Acesso Bloqueado</h2>
+                      <p className="text-gray-400 font-medium leading-relaxed">
+                        Sua licença de uso expirou. Para continuar gerenciando seus clientes e processos, realize a renovação agora mesmo.
+                      </p>
+                    </div>
+
+                    <div className="bg-[#161B22] border border-[#30363D] p-6 rounded-3xl space-y-4">
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-gray-500 font-bold uppercase">Valor da Renovação</span>
+                        <span className="text-white font-black text-xl">R$ 29,90</span>
+                      </div>
+                      <button
+                        onClick={async () => {
+                          const res = await fetch('/api/asaas/create-pix-charge', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ userId: currentUser.id, amount: 29.90, type: 'plan_renewal' })
+                          });
+                          const data = await res.json();
+                          if (data.success) {
+                            // Mostrar QR Code (talvez abrir um alerta ou modal lateral)
+                            alert('PIX Gerado! Copie o código: ' + data.payload);
+                            navigator.clipboard.writeText(data.payload);
+                          } else {
+                            alert('Erro ao gerar PIX: ' + data.error);
+                          }
+                        }}
+                        className="w-full bg-[#B8860B] hover:bg-[#9a7009] text-white py-5 rounded-2xl font-black uppercase text-xs tracking-widest shadow-xl shadow-[#B8860B]/20 transition-all active:scale-95 flex items-center justify-center gap-3"
+                      >
+                        <QrCode size={20} />
+                        Gerar PIX de Pagamento
+                      </button>
+                    </div>
+
+                    <button onClick={handleLogout} className="text-[10px] font-black text-gray-600 uppercase tracking-widest hover:text-white transition-colors">
+                      Sair da Conta
+                    </button>
+                  </div>
+                </div>
+              );
+            }
+            return null;
+          })()}
+
           {activeTab === 'dashboard' && <DashboardHome stats={stats} lists={lists} currentUser={currentUser} onNavigate={setActiveTab} />}
 
           <div className={activeTab === 'dashboard' ? 'hidden' : 'p-6 animate-in fade-in duration-300 h-full'}>
@@ -381,7 +465,7 @@ const App: React.FC = () => {
             )}
           </div>
         </div>
-      </main>
+      </div>
     </div>
   );
 };

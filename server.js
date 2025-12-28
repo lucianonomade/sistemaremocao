@@ -317,7 +317,15 @@ app.get('/api/resellers', async (req, res) => {
 });
 
 app.post('/api/resellers', async (req, res) => {
-  const { name, email, password, role = 'reseller', status = 'active', parentId, planId, pixKey, whatsapp, expiryDate, usageDays } = req.body;
+  let { name, email, password, role = 'reseller', status = 'active', parentId, planId, pixKey, whatsapp, expiryDate, usageDays } = req.body;
+
+  // Se não informar validade, define 7 dias de trial por padrão
+  if (!expiryDate) {
+    const trialDate = new Date();
+    trialDate.setDate(trialDate.getDate() + 7);
+    expiryDate = trialDate.toISOString().split('T')[0];
+    usageDays = 7;
+  }
 
   console.log('DEBUG: Iniciando criação de revendedor:', email);
 
