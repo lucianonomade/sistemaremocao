@@ -942,7 +942,6 @@ app.delete('/api/creatives/:id', async (req, res) => {
 
 
 // --- SERVING FRONTEND (PRODUCTION) ---
-const path = require('path'); // Ensure path is available
 
 // Serve static files from dist directory
 app.use(express.static(path.join(__dirname, 'dist')));
