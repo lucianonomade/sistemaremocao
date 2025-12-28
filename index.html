@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Central Remoção - Gestão de Crédito</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="index.css">
+  <script type="importmap">
+    {
+      "imports": {
+        "react/": "https://esm.sh/react@^19.2.3/",
+        "react": "https://esm.sh/react@^19.2.3",
+        "lucide-react": "https://esm.sh/lucide-react@^0.562.0",
+        "react-dom/": "https://esm.sh/react-dom@^19.2.3/"
+      }
+    }
+    </script>
+  <link rel="stylesheet" href="/index.css">
+</head>
+
+<body>
+  <div id="root"></div>
+  <script type="module" src="/index.tsx"></script>
+  <script>
+    (function (d, t) {
+      var BASE_URL = "https://labz-chatwoot.bnif1n.easypanel.host";
+      var g = d.createElement(t), s = d.getElementsByTagName(t)[0];
+      g.src = BASE_URL + "/packs/js/sdk.js";
+      g.async = true;
+      s.parentNode.insertBefore(g, s);
+      g.onload = function () {
+        window.chatwootSDK.run({
+          websiteToken: '4yL6Gy4qexQGVVr5AEZWgR6H',
+          baseUrl: BASE_URL
+        })
+      }
+    })(document, "script");
+  </script>
+</body>
+
+</html>
