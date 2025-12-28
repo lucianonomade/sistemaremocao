@@ -98,8 +98,8 @@ app.post('/api/auth/login', async (req, res) => {
 });
 
 app.post('/api/auth/register', async (req, res) => {
-  const { email, password, name, document } = req.body;
-  console.log('Tentativa de registro:', email);
+  const { email, password, name, document, parentId } = req.body;
+  console.log('Tentativa de registro:', email, 'Referência:', parentId);
 
   const { data, error } = await supabase.auth.signUp({
     email,
@@ -113,10 +113,24 @@ app.post('/api/auth/register', async (req, res) => {
 
   console.log('Usuário criado no Auth:', data.user.id);
 
+  // Calcular validade de 7 dias (Trial)
+  const trialDate = new Date();
+  trialDate.setDate(trialDate.getDate() + 7);
+  const expiryDate = trialDate.toISOString().split('T')[0];
+
   // Criação do perfil na tabela customizada
   const { error: profileError } = await supabase
     .from('profiles')
-    .insert([{ id: data.user.id, name, email, document, role: 'reseller', status: 'pending' }]);
+    .insert([{
+      id: data.user.id,
+      name,
+      email,
+      document,
+      role: 'reseller',
+      status: 'active', // Define active para permitir o insert (Lógica do App trata como Trial se sem plano)
+      parent_id: parentId || null,
+      expiry_date: expiryDate
+    }]);
 
   if (profileError) {
     console.error('Erro ao criar perfil na tabela profiles:', profileError.message);

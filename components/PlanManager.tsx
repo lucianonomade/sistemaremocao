@@ -1,13 +1,16 @@
 
 import React, { useState, useEffect } from 'react';
 import { Settings, Plus, Edit, Trash2, CheckCircle2, X, Percent, DollarSign } from 'lucide-react';
-import { Plan } from '../types';
+import { User, Plan } from '../types';
 
 interface PlanManagerProps {
     onPlanUpdate?: () => void;
+    currentUser?: User;
 }
 
-const PlanManager: React.FC<PlanManagerProps> = ({ onPlanUpdate }) => {
+const PlanManager: React.FC<PlanManagerProps> = ({ onPlanUpdate, currentUser }) => {
+    const isAdmin = currentUser?.role === 'admin';
+    const referralLink = `${window.location.origin}/?ref=${currentUser?.id}`;
     const [plans, setPlans] = useState<Plan[]>([]);
     const [isModalOpen, setModalOpen] = useState(false);
     const [editingId, setEditingId] = useState<string | null>(null);
@@ -80,16 +83,41 @@ const PlanManager: React.FC<PlanManagerProps> = ({ onPlanUpdate }) => {
                 <div className="absolute top-0 right-0 p-10 opacity-[0.02] group-hover:scale-125 transition-transform duration-1000">
                     <Settings size={140} />
                 </div>
-                <div className="relative z-10">
-                    <h3 className="text-2xl font-black uppercase tracking-tighter">Engenharia de Planos</h3>
-                    <p className="text-sm text-[#8B949E] font-medium">Defina os valores, comissões e pacotes de acesso do seu ecossistema.</p>
+                <div className="relative z-10 w-full">
+                    {isAdmin ? (
+                        <>
+                            <div className="flex justify-between items-center w-full">
+                                <div>
+                                    <h3 className="text-2xl font-black uppercase tracking-tighter">Engenharia de Planos</h3>
+                                    <p className="text-sm text-[#8B949E] font-medium">Defina os valores, comissões e pacotes de acesso do seu ecossistema.</p>
+                                </div>
+                                <button
+                                    onClick={() => { setEditingId(null); setFormData({ name: '', price: '', commissionRate: '', description: '' }); setModalOpen(true); }}
+                                    className="w-full sm:w-auto bg-[#B8860B] hover:bg-[#9a7009] text-white px-10 py-5 rounded-2xl text-xs font-black uppercase flex items-center justify-center gap-3 shadow-2xl shadow-[#B8860B]/20 transition-all active:scale-95"
+                                >
+                                    <Plus size={20} /> Criar Novo Plano
+                                </button>
+                            </div>
+                        </>
+                    ) : (
+                        <div className="space-y-4">
+                            <div>
+                                <h3 className="text-2xl font-black uppercase tracking-tighter text-white">Programa de Afiliados</h3>
+                                <p className="text-sm text-[#8B949E] font-medium">Divulgue seu link exclusivo e ganhe comissões sobre cada venda realizada.</p>
+                            </div>
+
+                            <div className="bg-[#0D1117] border border-[#30363D] p-4 rounded-xl flex items-center gap-4">
+                                <code className="flex-1 text-xs text-[#B8860B] font-mono truncate">{referralLink}</code>
+                                <button
+                                    onClick={() => { navigator.clipboard.writeText(referralLink); alert('Link copiado!'); }}
+                                    className="bg-[#B8860B] text-white px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider hover:bg-[#9a7009] transition-colors"
+                                >
+                                    Copiar Link
+                                </button>
+                            </div>
+                        </div>
+                    )}
                 </div>
-                <button
-                    onClick={() => { setEditingId(null); setFormData({ name: '', price: '', commissionRate: '', description: '' }); setModalOpen(true); }}
-                    className="w-full sm:w-auto bg-[#B8860B] hover:bg-[#9a7009] text-white px-10 py-5 rounded-2xl text-xs font-black uppercase flex items-center justify-center gap-3 shadow-2xl shadow-[#B8860B]/20 transition-all active:scale-95"
-                >
-                    <Plus size={20} /> Criar Novo Plano
-                </button>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -100,10 +128,12 @@ const PlanManager: React.FC<PlanManagerProps> = ({ onPlanUpdate }) => {
                                 <span className="text-[10px] font-black text-[#B8860B] uppercase tracking-[0.2em]">Modalidade Ativa</span>
                                 <h4 className="text-3xl font-black text-white tracking-tighter mt-1">{plan.name}</h4>
                             </div>
-                            <div className="flex gap-2">
-                                <button onClick={() => handleEdit(plan)} className="p-3 bg-[#0D1117] border border-[#30363D] text-[#8B949E] hover:text-[#B8860B] rounded-xl transition-all"><Edit size={16} /></button>
-                                <button onClick={() => handleDelete(plan.id)} className="p-3 bg-[#0D1117] border border-[#30363D] text-[#8B949E] hover:text-red-400 rounded-xl transition-all"><Trash2 size={16} /></button>
-                            </div>
+                            {isAdmin && (
+                                <div className="flex gap-2">
+                                    <button onClick={() => handleEdit(plan)} className="p-3 bg-[#0D1117] border border-[#30363D] text-[#8B949E] hover:text-[#B8860B] rounded-xl transition-all"><Edit size={16} /></button>
+                                    <button onClick={() => handleDelete(plan.id)} className="p-3 bg-[#0D1117] border border-[#30363D] text-[#8B949E] hover:text-red-400 rounded-xl transition-all"><Trash2 size={16} /></button>
+                                </div>
+                            )}
                         </div>
 
                         <div className="bg-[#0D1117] p-6 rounded-3xl border border-[#30363D] space-y-4">

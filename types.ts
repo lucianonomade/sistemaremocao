@@ -13,7 +13,7 @@ export interface Plan {
   description: string;
 }
 
-export type UserStatus = 'active' | 'pending' | 'blocked';
+export type UserStatus = 'active' | 'pending' | 'blocked' | 'trial';
 
 export interface Reseller {
   id: string;

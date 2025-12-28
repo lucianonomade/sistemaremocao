@@ -578,9 +578,29 @@ const Finance: React.FC<FinanceProps> = ({
                 </div>
                 <div className="flex justify-between items-center pb-4 border-b border-[#30363D]">
                   <span className="text-xs font-bold text-[#8B949E] uppercase">Status</span>
-                  <span className={`text-xs font-black uppercase px-3 py-1 rounded-lg ${currentUser.status === 'active' ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'}`}>
-                    {currentUser.status === 'active' ? 'Ativo' : 'Pendente / Vencido'}
-                  </span>
+                  {(() => {
+                    const hasExpiry = currentUser.expiryDate && !isNaN(new Date(currentUser.expiryDate).getTime());
+                    const isExpired = !hasExpiry || new Date(currentUser.expiryDate!).getTime() < new Date().getTime();
+                    const isPaidPlan = !!currentUser.planId;
+
+                    // Determine Status Label and Color
+                    let statusLabel = 'Pendente / Vencido';
+                    let statusColor = 'bg-red-500/10 text-red-500';
+
+                    if (!isExpired && isPaidPlan && currentUser.status === 'active') {
+                      statusLabel = 'Ativo';
+                      statusColor = 'bg-green-500/10 text-green-500';
+                    } else if (!isExpired && !isPaidPlan) {
+                      statusLabel = 'Em Período de Teste';
+                      statusColor = 'bg-[#B8860B]/10 text-[#B8860B]';
+                    }
+
+                    return (
+                      <span className={`text-xs font-black uppercase px-3 py-1 rounded-lg ${statusColor}`}>
+                        {statusLabel}
+                      </span>
+                    );
+                  })()}
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-xs font-bold text-[#8B949E] uppercase">Vencimento</span>

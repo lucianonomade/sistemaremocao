@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Users, DollarSign, Activity, TrendingUp, ChevronRight, Link, Search, Save, Copy, MessageSquare, Calendar } from 'lucide-react';
 import { User, CreditList } from '../types';
 
@@ -11,11 +11,32 @@ interface DashboardHomeProps {
     };
     lists: CreditList[];
     currentUser: User;
+    setCurrentUser: React.Dispatch<React.SetStateAction<User | null>>;
     onNavigate: (tab: string) => void;
 }
 
-export const DashboardHome: React.FC<DashboardHomeProps> = ({ stats, lists, currentUser, onNavigate }) => {
+export const DashboardHome: React.FC<DashboardHomeProps> = ({ stats, lists, currentUser, setCurrentUser, onNavigate }) => {
     const recentLists = lists.slice(0, 3); // Show top 3 recent
+    const [whatsapp, setWhatsapp] = useState(currentUser.whatsapp || '');
+
+    const handleSaveWhatsapp = async () => {
+        try {
+            const response = await fetch(`/api/resellers/${currentUser.id}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ whatsapp })
+            });
+
+            if (!response.ok) throw new Error('Falha ao salvar WhatsApp');
+
+            const updatedUser = await response.json();
+            setCurrentUser(prev => prev ? ({ ...prev, whatsapp: updatedUser.whatsapp }) : null);
+            alert('WhatsApp de vendas atualizado com sucesso!');
+        } catch (error) {
+            console.error(error);
+            alert('Erro ao atualizar WhatsApp.');
+        }
+    };
 
     return (
         <div className="p-8 space-y-8 animate-in fade-in duration-500">
@@ -170,10 +191,14 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({ stats, lists, curr
                                     className="w-full bg-[#0A0A0C] border border-white/10 rounded-xl py-3 pl-11 pr-4 text-sm text-white placeholder-gray-600 focus:ring-1 focus:ring-[#D99000] focus:border-[#D99000] transition-all outline-none"
                                     placeholder="Ex: 5511999999999"
                                     type="text"
-                                    defaultValue={currentUser.whatsapp || ''}
+                                    value={whatsapp}
+                                    onChange={(e) => setWhatsapp(e.target.value)}
                                 />
                             </div>
-                            <button className="w-full bg-[#D99000] hover:bg-[#b37600] text-white font-bold text-xs uppercase tracking-wider py-4 rounded-xl shadow-lg shadow-[#D99000]/20 transition-all flex items-center justify-center gap-2">
+                            <button
+                                onClick={handleSaveWhatsapp}
+                                className="w-full bg-[#D99000] hover:bg-[#b37600] text-white font-bold text-xs uppercase tracking-wider py-4 rounded-xl shadow-lg shadow-[#D99000]/20 transition-all flex items-center justify-center gap-2"
+                            >
                                 <Save size={18} />
                                 Salvar Configuração
                             </button>

@@ -16,7 +16,8 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin, onRegister, resellers,
     name: '',
     email: '',
     password: '',
-    document: ''
+    document: '',
+    parentId: ''
   });
 
   useEffect(() => {
@@ -25,6 +26,12 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin, onRegister, resellers,
       setAuthType('client');
       const cpf = params.get('cpf');
       if (cpf) setFormData(prev => ({ ...prev, document: cpf }));
+    } else {
+      const ref = params.get('ref');
+      if (ref) {
+        setAuthType('register');
+        setFormData(prev => ({ ...prev, parentId: ref }));
+      }
     }
   }, []);
 
@@ -85,7 +92,9 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin, onRegister, resellers,
           status: data.profile.status,
           resellerId: data.profile.id,
           document: data.profile.document,
-          whatsapp: data.profile.whatsapp
+          whatsapp: data.profile.whatsapp,
+          expiryDate: data.profile.expiry_date, // Mapeamento crucial para o banner funcionar
+          planId: data.profile.plan_id         // Mapeamento crucial para a lógica de trial
         };
         onLogin(user);
       } else {
