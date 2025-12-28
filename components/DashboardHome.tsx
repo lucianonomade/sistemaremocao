@@ -62,17 +62,19 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({ stats, lists, curr
                     </div>
                 </div>
 
-                <div className="bg-[#181A1E] rounded-2xl p-6 border border-white/5 relative overflow-hidden flex flex-col justify-between h-32 group hover:border-white/10 transition-all">
-                    <div className="flex justify-between items-start">
-                        <div>
-                            <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">Revendedores Ativos</p>
-                            <h3 className="text-3xl font-['Outfit'] font-bold text-white">{stats.activeResellers}</h3>
-                        </div>
-                        <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-[#1E2025] text-purple-400 group-hover:bg-purple-400/10 transition-colors">
-                            <TrendingUp size={20} />
+                {currentUser.role === 'admin' && (
+                    <div className="bg-[#181A1E] rounded-2xl p-6 border border-white/5 relative overflow-hidden flex flex-col justify-between h-32 group hover:border-white/10 transition-all">
+                        <div className="flex justify-between items-start">
+                            <div>
+                                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">Revendedores Ativos</p>
+                                <h3 className="text-3xl font-['Outfit'] font-bold text-white">{stats.activeResellers}</h3>
+                            </div>
+                            <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-[#1E2025] text-purple-400 group-hover:bg-purple-400/10 transition-colors">
+                                <TrendingUp size={20} />
+                            </div>
                         </div>
                     </div>
-                </div>
+                )}
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
