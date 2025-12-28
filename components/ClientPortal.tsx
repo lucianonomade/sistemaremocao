@@ -15,9 +15,17 @@ interface ClientPortalProps {
 const ClientPortal: React.FC<ClientPortalProps> = ({ currentUser, onLogout, list, reseller, services }) => {
   const progress = list ? calculateListProgress(list.startDate, list.manualConclusion, list.organs) : 0;
 
+  const resellerServices = services.filter(s => s.resellerId === reseller?.id && s.isActive);
+
   const handleSupportClick = () => {
     const cleanPhone = (reseller?.whatsapp || '5511999999999').replace(/\D/g, '');
     const text = encodeURIComponent(`Olá, sou o cliente ${currentUser.name} e gostaria de suporte sobre meu processo de limpeza ID: ${list?.id || 'NOVO'}`);
+    window.open(`https://wa.me/${cleanPhone}?text=${text}`, '_blank');
+  };
+
+  const handleServiceClick = (service: ServiceCard) => {
+    const cleanPhone = (reseller?.whatsapp || '5511999999999').replace(/\D/g, '');
+    const text = encodeURIComponent(`Olá, vi o serviço "${service.title}" na sua vitrine e gostaria de contratá-lo agora.`);
     window.open(`https://wa.me/${cleanPhone}?text=${text}`, '_blank');
   };
 
@@ -27,7 +35,7 @@ const ClientPortal: React.FC<ClientPortalProps> = ({ currentUser, onLogout, list
       {/* Background Ambience */}
       <div className="fixed top-0 left-0 w-full h-full pointer-events-none z-0">
         <div className="absolute top-[-10%] left-[20%] w-[500px] h-[500px] bg-[#F59E0B]/10 rounded-full blur-[100px] opacity-20"></div>
-        <div className="absolute bottom-[-10%] right-[10%] w-[400px] h-[400px] bg-blue-500/10 rounded-full blur-[100px] opacity-20"></div>
+        <div className="absolute bottom-[-10%] right-[10%] right-[10%] w-[400px] h-[400px] bg-blue-500/10 rounded-full blur-[100px] opacity-20"></div>
       </div>
 
       {/* Header */}
@@ -117,6 +125,51 @@ const ClientPortal: React.FC<ClientPortalProps> = ({ currentUser, onLogout, list
             ))}
           </div>
         </div>
+
+        {/* Reseller Showcase Section */}
+        {resellerServices.length > 0 && (
+          <div className="w-full mt-12 animate-in slide-in-from-bottom-8 duration-1000 delay-300">
+            <div className="flex items-center gap-3 mb-6 px-2">
+              <div className="w-8 h-8 rounded-lg bg-[#F59E0B]/20 flex items-center justify-center text-[#F59E0B]">
+                <MessageCircle size={18} />
+              </div>
+              <div>
+                <h3 className="text-xl font-black text-white">Serviços Exclusivos</h3>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Oportunidades para o seu Perfil</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4">
+              {resellerServices.map((service) => (
+                <div
+                  key={service.id}
+                  className="bg-[#161B22] border border-gray-800 rounded-3xl p-5 hover:border-[#F59E0B]/50 transition-all duration-300 group shadow-xl"
+                >
+                  <div className="flex justify-between items-start mb-4">
+                    <div className="w-12 h-12 rounded-2xl bg-[#F59E0B]/10 flex items-center justify-center text-[#F59E0B] group-hover:scale-110 transition-transform">
+                      <TrendingUp size={24} />
+                    </div>
+                    {service.price > 0 && (
+                      <div className="text-right">
+                        <span className="text-[10px] font-black text-gray-500 uppercase tracking-wider">Valor</span>
+                        <p className="text-lg font-black text-[#F59E0B]">R$ {Number(service.price).toFixed(2).replace('.', ',')}</p>
+                      </div>
+                    )}
+                  </div>
+                  <h4 className="text-lg font-black text-white mb-2">{service.title}</h4>
+                  <p className="text-sm text-gray-400 leading-relaxed mb-6 line-clamp-2">{service.description}</p>
+
+                  <button
+                    onClick={() => handleServiceClick(service)}
+                    className="w-full py-4 bg-[#F59E0B] hover:bg-[#d98b00] text-[#0B0E14] rounded-2xl font-black text-xs uppercase tracking-[0.15em] shadow-lg shadow-[#F59E0B]/20 transition-all active:scale-95 flex items-center justify-center gap-2"
+                  >
+                    Chamar no WhatsApp
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Footer */}
         <div className="mt-12 text-center opacity-60 animate-in fade-in duration-700 delay-500">

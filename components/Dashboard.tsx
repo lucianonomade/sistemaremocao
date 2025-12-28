@@ -116,7 +116,7 @@ const Dashboard: React.FC<DashboardProps> = ({
 
   const stats = [
     { label: 'Total de Clientes', value: totalClients, icon: Users, color: 'text-blue-500', bg: 'bg-blue-500/10', visible: true },
-    { label: 'Faturamento Master', value: `R$ ${monthlyRevenue.toLocaleString('pt-BR')}`, icon: DollarSign, color: 'text-green-500', bg: 'bg-green-500/10', visible: isAdmin },
+    { label: isAdmin ? 'Faturamento da Master' : 'Faturamento de Revendas', value: `R$ ${monthlyRevenue.toLocaleString('pt-BR')}`, icon: DollarSign, color: 'text-green-500', bg: 'bg-green-500/10', visible: isAdmin },
     { label: 'Média de Progresso', value: `${avgProgress}%`, icon: Activity, color: 'text-[#B8860B]', bg: 'bg-[#B8860B]/10', visible: true },
     { label: isAdmin ? 'Revendedores Ativos' : 'Listas em Aberto', value: isAdmin ? activeResellersCount : filteredLists.filter(l => l.status === 'processing').length, icon: isAdmin ? TrendingUp : FileText, color: 'text-purple-500', bg: 'bg-purple-500/10', visible: true },
   ].filter(s => s.visible);
@@ -262,12 +262,12 @@ const Dashboard: React.FC<DashboardProps> = ({
           <div className="space-y-4">
             <h3 className="text-xl font-black flex items-center gap-3 px-2">
               <Smartphone size={20} className="text-[#B8860B]" />
-              Suporte Personalizado
+              WhatsApp de Vendas
             </h3>
             <div className="bg-[#161B22] border border-[#30363D] p-8 rounded-[2.5rem] shadow-xl space-y-6">
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <p className="text-[10px] font-black text-[#8B949E] uppercase tracking-widest ml-1">WhatsApp de Atendimento</p>
+                  <p className="text-[10px] font-black text-[#8B949E] uppercase tracking-widest ml-1">Configurar WhatsApp de Vendas</p>
                   <div className="relative group">
                     <MessageCircle className="absolute left-5 top-1/2 -translate-y-1/2 text-[#484F58] group-focus-within:text-[#B8860B] transition-colors" size={20} />
                     <input

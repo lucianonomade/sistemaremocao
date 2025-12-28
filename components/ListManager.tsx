@@ -1,8 +1,10 @@
 
 import React from 'react';
-import { Clock, CheckCircle2, ListChecks, Calendar, ShieldCheck, UserCheck, Share2, Target, AlertCircle, TrendingUp } from 'lucide-react';
+import { Clock, CheckCircle2, ListChecks, Calendar, ShieldCheck, UserCheck, Share2, Target, AlertCircle, TrendingUp, Upload } from 'lucide-react';
 import { CreditList, User, OrganStatus, Reseller } from '../types';
 import { calculateListProgress } from '../utils/progress';
+// Dynamic import used in handleFileUpload
+
 
 interface ListManagerProps {
   lists: CreditList[];
@@ -16,9 +18,75 @@ const ListManager: React.FC<ListManagerProps> = ({ lists, setLists, currentUser,
   const [isModalOpen, setIsModalOpen] = React.useState(false);
   const [newClientDoc, setNewClientDoc] = React.useState('');
   const [isLoading, setIsLoading] = React.useState(false);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   // Agora permitimos que tanto Admin quanto Reseller tenham controle manual
   const hasControlAccess = currentUser.role === 'admin' || currentUser.role === 'reseller';
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsLoading(true);
+
+    try {
+      // Carregar XLSX do CDN dinamicamente se não estiver presente no window
+      // @ts-ignore
+      if (!window.XLSX) {
+        await new Promise((resolve, reject) => {
+          const script = document.createElement('script');
+          script.src = "https://cdn.sheetjs.com/xlsx-0.18.5/package/dist/xlsx.full.min.js";
+          script.onload = resolve;
+          script.onerror = reject;
+          document.head.appendChild(script);
+        });
+      }
+
+      // @ts-ignore
+      const XLSX = window.XLSX;
+      const data = await file.arrayBuffer();
+      const workbook = XLSX.read(data);
+      const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+      const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+      let count = 0;
+      // Skip header, assume first column is CPF/Document
+      for (let i = 1; i < jsonData.length; i++) {
+        const row: any = jsonData[i];
+        const doc = row[0]?.toString().replace(/\D/g, '');
+        if (doc && (doc.length === 11 || doc.length === 14)) {
+          // Create List logic repeated
+          try {
+            const res = await fetch('/api/lists', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ resellerId: currentUser.id, clientDocument: doc })
+            });
+            if (res.ok) {
+              const newList = await res.json();
+              const formattedList: CreditList = {
+                id: newList.id || `temp-${Date.now()}-${Math.random()}`,
+                resellerId: currentUser.id,
+                clientDocument: doc,
+                startDate: new Date().toISOString(),
+                manualConclusion: false,
+                status: 'processing',
+                organs: { serasa: false, boaVista: false, spc: false, cenprotNacional: false, cenprotSP: false }
+              };
+              setLists(prev => [formattedList, ...prev]);
+              count++;
+            }
+          } catch (e) { console.error('Error importing row', i, e); }
+        }
+      }
+      alert(`${count} protocolos importados com sucesso!`);
+    } catch (error) {
+      console.error(error);
+      alert('Erro ao processar arquivo Excel.');
+    } finally {
+      setIsLoading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
 
   const handleCreateList = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -161,12 +229,29 @@ const ListManager: React.FC<ListManagerProps> = ({ lists, setLists, currentUser,
         </div>
 
         {hasControlAccess && (
-          <button
-            onClick={() => setIsModalOpen(true)}
-            className="relative z-10 px-6 py-3 bg-[#B8860B] hover:bg-[#9a7009] text-white rounded-xl font-bold text-sm shadow-lg shadow-[#B8860B]/20 transition-all flex items-center gap-2"
-          >
-            <Target size={18} /> Novo Protocolo
-          </button>
+          <div className="flex gap-3 relative z-10">
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileUpload}
+              className="hidden"
+              accept=".xlsx, .xls, .csv"
+            />
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="px-6 py-3 bg-[#1e2229] border border-[#30363D] hover:bg-[#252a33] text-[#8B949E] hover:text-white rounded-xl font-bold text-sm shadow-lg transition-all flex items-center gap-2 group/btn"
+              disabled={isLoading}
+            >
+              <Upload size={18} className="group-hover/btn:scale-110 transition-transform" />
+              {isLoading ? 'Processando...' : 'Importar Lote'}
+            </button>
+            <button
+              onClick={() => setIsModalOpen(true)}
+              className="px-6 py-3 bg-[#B8860B] hover:bg-[#9a7009] text-white rounded-xl font-bold text-sm shadow-lg shadow-[#B8860B]/20 transition-all flex items-center gap-2"
+            >
+              <Target size={18} /> Novo Protocolo
+            </button>
+          </div>
         )}
       </div>
 

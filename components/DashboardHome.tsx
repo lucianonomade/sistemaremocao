@@ -37,7 +37,9 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({ stats, lists, curr
                 <div className="bg-[#181A1E] rounded-2xl p-6 border border-white/5 relative overflow-hidden flex flex-col justify-between h-32 group hover:border-white/10 transition-all">
                     <div className="flex justify-between items-start">
                         <div>
-                            <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">Faturamento Master</p>
+                            <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">
+                                {currentUser.role === 'admin' ? 'Faturamento da Master' : 'Faturamento de Revendas'}
+                            </p>
                             <h3 className="text-3xl font-['Outfit'] font-bold text-white">
                                 {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(stats.totalRevenue)}
                             </h3>
@@ -154,10 +156,10 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({ stats, lists, curr
                     <div>
                         <div className="flex items-center gap-2 mb-4">
                             <MessageSquare className="text-yellow-500" size={20} />
-                            <h3 className="font-['Outfit'] font-bold text-lg text-white">Suporte Personalizado</h3>
+                            <h3 className="font-['Outfit'] font-bold text-lg text-white">WhatsApp de Vendas</h3>
                         </div>
                         <div className="bg-[#181A1E] border border-white/5 rounded-3xl p-6">
-                            <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-3 block">Whatsapp de Atendimento</label>
+                            <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-3 block">Configurar WhatsApp de Vendas</label>
                             <div className="relative mb-6">
                                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                                     <MessageSquare className="text-gray-500" size={18} />

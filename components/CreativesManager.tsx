@@ -1,5 +1,5 @@
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   Plus,
   Image as ImageIcon,
@@ -24,35 +24,26 @@ const CreativesManager: React.FC<CreativesManagerProps> = ({ currentUser }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('Todos');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [materials, setMaterials] = useState<CreativeMaterial[]>([
-    {
-      id: '1',
-      name: 'Banner Instagram - Recuperação de Score',
-      category: 'Banners Instagram',
-      type: 'image',
-      url: '#',
-      thumbnail: 'https://images.unsplash.com/photo-1611162617474-5b21e879e113?q=80&w=300&auto=format&fit=crop',
-      createdAt: new Date().toISOString()
-    },
-    {
-      id: '2',
-      name: 'Tabela de Preços Oficial 2024',
-      category: 'Tabela de Preços',
-      type: 'pdf',
-      url: '#',
-      createdAt: new Date().toISOString()
-    },
-    {
-      id: '3',
-      name: 'Vídeo Explicativo - Como Funciona a Limpeza',
-      category: 'Vídeos Treinamento',
-      type: 'video',
-      url: '#',
-      createdAt: new Date().toISOString()
+  const [materials, setMaterials] = useState<CreativeMaterial[]>([]);
+
+  const fetchData = async () => {
+    try {
+      const res = await fetch('/api/creatives');
+      if (res.ok) {
+        const data = await res.json();
+        setMaterials(data);
+      }
+    } catch (err) {
+      console.error('Error fetching creatives:', err);
     }
-  ]);
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
 
   const [newMaterial, setNewMaterial] = useState({
     name: '',
@@ -78,6 +69,7 @@ const CreativesManager: React.FC<CreativesManagerProps> = ({ currentUser }) => {
     const file = fileInputRef.current.files[0];
     const formData = new FormData();
     formData.append('file', file);
+    setIsLoading(true);
 
     try {
       // 1. Upload File
@@ -118,11 +110,39 @@ const CreativesManager: React.FC<CreativesManagerProps> = ({ currentUser }) => {
     } catch (err: any) {
       console.error(err);
       alert('Erro: ' + err.message);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const removeMaterial = (id: string) => {
-    setMaterials(materials.filter(m => m.id !== id));
+  const handleDownload = (url: string, name: string) => {
+    if (!url || url === '#') {
+      alert('Link de download inválido.');
+      return;
+    }
+    // Cria um link temporário para forçar o download se possível
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', name);
+    link.setAttribute('target', '_blank');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const removeMaterial = async (id: string) => {
+    if (!confirm('Deseja realmente excluir este material?')) return;
+
+    try {
+      const res = await fetch(`/api/creatives/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        setMaterials(materials.filter(m => m.id !== id));
+      } else {
+        throw new Error('Erro ao excluir');
+      }
+    } catch (err) {
+      alert('Erro ao excluir material.');
+    }
   };
 
   const getIcon = (type: string) => {
@@ -209,7 +229,10 @@ const CreativesManager: React.FC<CreativesManagerProps> = ({ currentUser }) => {
               </div>
 
               <div className="mt-6 flex items-center justify-between gap-2">
-                <button className="flex-1 flex items-center justify-center gap-2 bg-[#B8860B]/10 hover:bg-[#B8860B] text-[#B8860B] hover:text-white px-4 py-2.5 rounded-xl text-xs font-bold transition-all group/btn">
+                <button
+                  onClick={() => handleDownload(material.url, material.name)}
+                  className="flex-1 flex items-center justify-center gap-2 bg-[#B8860B]/10 hover:bg-[#B8860B] text-[#B8860B] hover:text-white px-4 py-2.5 rounded-xl text-xs font-bold transition-all group/btn"
+                >
                   <Download size={14} className="group-hover/btn:translate-y-0.5 transition-transform" />
                   Download
                 </button>
@@ -291,11 +314,16 @@ const CreativesManager: React.FC<CreativesManagerProps> = ({ currentUser }) => {
               >
                 <input type="file" className="hidden" ref={fileInputRef} />
                 <Upload className="text-[#B8860B]" size={32} />
-                <span className="text-xs font-bold text-[#8B949E]">Selecionar Arquivo</span>
+                <span className="text-xs font-bold text-[#8B949E]">
+                  {fileInputRef.current?.files?.[0] ? fileInputRef.current.files[0].name : 'Selecionar Arquivo'}
+                </span>
               </div>
 
-              <button className="w-full bg-[#B8860B] hover:bg-[#9a7009] text-white py-4 rounded-2xl font-black text-lg shadow-xl shadow-[#B8860B]/20 transition-all mt-6">
-                Salvar Criativo
+              <button
+                disabled={isLoading}
+                className="w-full bg-[#B8860B] disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#9a7009] text-white py-4 rounded-2xl font-black text-lg shadow-xl shadow-[#B8860B]/20 transition-all mt-6"
+              >
+                {isLoading ? 'Salvando...' : 'Salvar Criativo'}
               </button>
             </form>
           </div>

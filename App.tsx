@@ -16,7 +16,8 @@ import {
   FileText,
   ShoppingBag,
   PieChart,
-  Calendar
+  Calendar,
+  Wrench
 } from 'lucide-react';
 import { User, Reseller, CreditList, Transaction, Plan, ServiceCard } from './types';
 import AuthScreen from './components/AuthScreen';
@@ -26,6 +27,7 @@ import ResellerManager from './components/ResellerManager';
 import PlanManager from './components/PlanManager';
 import ServicesManager from './components/ServicesManager';
 import CreativesManager from './components/CreativesManager';
+import ToolsManager from './components/ToolsManager';
 import Queries from './components/Queries';
 import ClientPortal from './components/ClientPortal';
 import { DashboardHome } from './components/DashboardHome';
@@ -240,6 +242,7 @@ const App: React.FC = () => {
               <SidebarLink icon={History} label="Extrato Detalhado" tabId="finance" />
 
               <SidebarLink sectionTitle label="Outros" />
+              <SidebarLink icon={Wrench} label="Ferramentas" tabId="tools" />
               <SidebarLink icon={ImageIcon} label="Criativos" tabId="creatives" />
               <SidebarLink icon={LifeBuoy} label="Suporte Técnico" tabId="support" />
             </>
@@ -254,6 +257,7 @@ const App: React.FC = () => {
               <SidebarLink icon={History} label="Extrato Detalhado" tabId="finance" />
 
               <SidebarLink sectionTitle label="Outros" />
+              <SidebarLink icon={Wrench} label="Ferramentas" tabId="tools" />
               <SidebarLink icon={ImageIcon} label="Criativos" tabId="creatives" />
               <SidebarLink icon={LifeBuoy} label="Suporte Técnico" tabId="support" />
             </>
@@ -292,7 +296,8 @@ const App: React.FC = () => {
                       activeTab === 'plans' ? 'Planos' :
                         activeTab === 'queries' ? 'Consultas' :
                           activeTab === 'services' ? 'Loja de Serviços' :
-                            activeTab === 'creatives' ? 'Criativos' : activeTab}
+                            activeTab === 'tools' ? 'Ferramentas' :
+                              activeTab === 'creatives' ? 'Criativos' : activeTab}
             </h2>
           </div>
 
@@ -361,6 +366,9 @@ const App: React.FC = () => {
             )}
             {activeTab === 'creatives' && (
               <CreativesManager currentUser={currentUser} />
+            )}
+            {activeTab === 'tools' && (
+              <ToolsManager currentUser={currentUser} />
             )}
             {activeTab === 'support' && (
               <div className="flex flex-col items-center justify-center h-full text-gray-500 gap-4">

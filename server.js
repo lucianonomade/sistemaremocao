@@ -304,7 +304,8 @@ app.get('/api/resellers', async (req, res) => {
     planId: r.plan_id,
     plan: r.plans?.name || (r.role === 'admin' ? 'Admin' : 'Mensal'),
     commissionRate: r.plans?.commission_rate || (r.role === 'admin' ? 0 : 40),
-    expiryDate: r.created_at,
+    expiryDate: r.expiry_date || '2099-12-31',
+    usageDays: r.usage_days || 30,
     isActive: r.status === 'active',
     status: r.status,
     balance: parseFloat(r.balance || 0),
@@ -316,50 +317,94 @@ app.get('/api/resellers', async (req, res) => {
 });
 
 app.post('/api/resellers', async (req, res) => {
-  const { name, email, password, role = 'reseller', status = 'active', parentId, planId, pixKey, whatsapp } = req.body;
-  const { data, error } = await supabase
-    .from('profiles')
-    .insert([{
-      name, email, password, role, status,
-      parent_id: parentId,
-      plan_id: planId,
-      pix_key: pixKey,
-      whatsapp
-    }])
-    .select()
-    .single();
+  const { name, email, password, role = 'reseller', status = 'active', parentId, planId, pixKey, whatsapp, expiryDate, usageDays } = req.body;
 
-  if (error) return res.status(400).json({ error: error.message });
-  res.json({
-    id: data.id,
-    name: data.name,
-    email: data.email,
-    password: data.password,
-    role: data.role,
-    status: data.status,
-    parentId: data.parent_id,
-    planId: data.plan_id,
-    pixKey: data.pix_key,
-    whatsapp: data.whatsapp,
-    balance: parseFloat(data.balance || 0)
-  });
+  console.log('DEBUG: Iniciando criação de revendedor:', email);
+
+  try {
+    // 1. Criar usuário no Auth
+    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true,
+      user_metadata: { name, role }
+    });
+
+    // Se falhar admin (falta permissão), tenta signUp normal
+    let userId = authData?.user?.id;
+    if (authError || !userId) {
+      console.log('DEBUG: Admin createUser falhou, tentando signup normal...');
+      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({ email, password });
+      if (signUpError) throw signUpError;
+      userId = signUpData.user.id;
+    }
+
+    // 2. Criar perfil
+    const { data, error: profileError } = await supabase
+      .from('profiles')
+      .insert([{
+        id: userId,
+        name,
+        email,
+        password, // Guardamos para o admin ver/editar
+        role,
+        status,
+        parent_id: (parentId && parentId !== '') ? parentId : null,
+        plan_id: (planId && planId !== '') ? planId : null,
+        pix_key: pixKey,
+        whatsapp,
+        expiry_date: expiryDate,
+        usage_days: usageDays
+      }])
+      .select()
+      .single();
+
+    if (profileError) throw profileError;
+
+    res.json({
+      id: data.id,
+      name: data.name,
+      email: data.email,
+      password: data.password,
+      role: data.role,
+      status: data.status,
+      parentId: data.parent_id,
+      planId: data.plan_id,
+      pixKey: data.pix_key,
+      whatsapp: data.whatsapp,
+      expiryDate: data.expiry_date,
+      balance: parseFloat(data.balance || 0)
+    });
+
+  } catch (error) {
+    console.error('DEBUG: Erro no cadastro de revendedor:', error);
+    res.status(400).json({ error: error.message || 'Erro interno ao salvar revendedor' });
+  }
 });
 
 app.patch('/api/resellers/:id', async (req, res) => {
-  const { name, email, password, role, status, balance, whatsapp, planId, pixKey, parentId } = req.body;
+  const { name, email, password, role, status, balance, whatsapp, planId, pixKey, parentId, expiryDate, usageDays } = req.body;
+
+  console.log('DEBUG: Atualizando revendedor:', req.params.id);
+
   const { data, error } = await supabase
     .from('profiles')
     .update({
       name, email, password, role, status, balance, whatsapp,
-      plan_id: planId,
+      plan_id: (planId && planId !== '') ? planId : null,
       pix_key: pixKey,
-      parent_id: parentId
+      parent_id: (parentId && parentId !== '') ? parentId : null,
+      expiry_date: expiryDate,
+      usage_days: usageDays
     })
     .eq('id', req.params.id)
     .select()
     .single();
 
-  if (error) return res.status(400).json({ error: error.message });
+  if (error) {
+    console.error('DEBUG: Erro ao atualizar revendedor no Supabase:', error);
+    return res.status(400).json({ error: error.message });
+  }
   res.json({
     id: data.id,
     name: data.name,
@@ -371,6 +416,7 @@ app.patch('/api/resellers/:id', async (req, res) => {
     planId: data.plan_id,
     pixKey: data.pix_key,
     parentId: data.parent_id,
+    expiryDate: data.expiry_date,
     balance: parseFloat(data.balance || 0)
   });
 });
@@ -394,7 +440,8 @@ app.get('/api/services', async (req, res) => {
     title: s.title,
     description: s.description,
     icon: s.icon,
-    isActive: s.is_active
+    isActive: s.is_active,
+    price: s.price || 0
   });
 
   res.json(data.map(mapping));
@@ -409,7 +456,7 @@ app.post('/api/services', async (req, res) => {
       description,
       icon,
       is_active: isActive,
-      reseller_id: resellerId,
+      reseller_id: resellerId || req.body.reseller_id,
       price: price || 0
     }])
     .select()
@@ -1020,6 +1067,70 @@ app.delete('/api/creatives/:id', async (req, res) => {
 
 
 
+
+// --- TOOLS ENDPOINTS (Ecossistema de Ferramentas) ---
+const TOOLS_FILE = 'tools.json';
+
+// Helper to load tools
+function loadTools() {
+  if (!fs.existsSync(TOOLS_FILE)) return [];
+  try {
+    return JSON.parse(fs.readFileSync(TOOLS_FILE, 'utf8'));
+  } catch (e) {
+    return [];
+  }
+}
+
+// Helper to save tools
+function saveTools(tools) {
+  fs.writeFileSync(TOOLS_FILE, JSON.stringify(tools, null, 2));
+}
+
+// Get All Tools
+app.get('/api/tools', (req, res) => {
+  const tools = loadTools();
+  res.json(tools);
+});
+
+// Create Tool (Admin)
+app.post('/api/tools', (req, res) => {
+  const { title, description, link, buttonText, icon, isActive } = req.body;
+  const tools = loadTools();
+  const newTool = {
+    id: Date.now().toString(),
+    title,
+    description,
+    link,
+    buttonText: buttonText || 'Acessar Agora',
+    icon: icon || 'Zap',
+    isActive: isActive !== undefined ? isActive : true
+  };
+  tools.push(newTool);
+  saveTools(tools);
+  res.json(newTool);
+});
+
+// Update Tool (Admin)
+app.put('/api/tools/:id', (req, res) => {
+  const { id } = req.params;
+  const updates = req.body;
+  let tools = loadTools();
+  const index = tools.findIndex(t => t.id === id);
+  if (index === -1) return res.status(404).json({ error: 'Tool not found' });
+
+  tools[index] = { ...tools[index], ...updates };
+  saveTools(tools);
+  res.json(tools[index]);
+});
+
+// Delete Tool (Admin)
+app.delete('/api/tools/:id', (req, res) => {
+  const { id } = req.params;
+  let tools = loadTools();
+  tools = tools.filter(t => t.id !== id);
+  saveTools(tools);
+  res.json({ success: true });
+});
 
 // --- SERVING FRONTEND (PRODUCTION) ---
 
