@@ -87,6 +87,8 @@ export interface User {
   planId?: string;
   pixKey?: string;
   balance?: number;
+  plan?: string;
+  expiryDate?: string;
 }
 
 export interface ServiceCard {

@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { TrendingUp, MessageCircle, ShieldCheck, LogOut, Zap, QrCode, Copy, CheckCircle2, X, ExternalLink, CreditCard, ChevronRight, Smartphone } from 'lucide-react';
+import { TrendingUp, LogOut, CheckCircle2, MessageCircle, ShieldCheck } from 'lucide-react';
 import { User, CreditList, Reseller, ServiceCard } from '../types';
 import { calculateListProgress } from '../utils/progress';
 
@@ -13,82 +13,104 @@ interface ClientPortalProps {
 }
 
 const ClientPortal: React.FC<ClientPortalProps> = ({ currentUser, onLogout, list, reseller, services }) => {
-  const [showRenewalModal, setShowRenewalModal] = useState(false);
-  const [copied, setCopied] = useState(false);
   const progress = list ? calculateListProgress(list.startDate, list.manualConclusion, list.organs) : 0;
 
-  const handleCopyPix = () => {
-    setCopied(true);
-    navigator.clipboard.writeText(reseller?.paymentConfig?.pixKey || 'Chave não configurada');
-    setTimeout(() => setCopied(false), 2000);
-  };
-
   const handleSupportClick = () => {
-    // Limpando o número para garantir que contenha apenas dígitos
     const cleanPhone = (reseller?.whatsapp || '5511999999999').replace(/\D/g, '');
     const text = encodeURIComponent(`Olá, sou o cliente ${currentUser.name} e gostaria de suporte sobre meu processo de limpeza ID: ${list?.id || 'NOVO'}`);
     window.open(`https://wa.me/${cleanPhone}?text=${text}`, '_blank');
   };
 
-  const activeServices = services.filter(s => s.isActive);
-
   return (
-    <div className="min-h-screen bg-[#0D1117] text-white pb-24 selection:bg-[#B8860B]/30">
-      <header className="bg-[#161B22]/90 backdrop-blur-xl border-b border-[#30363D] sticky top-0 z-50 px-6 py-4 flex items-center justify-between shadow-2xl">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-[#B8860B] flex items-center justify-center shadow-lg shadow-[#B8860B]/20"><TrendingUp size={22} className="text-white" /></div>
-          <div className="flex flex-col">
-            <span className="font-black text-[10px] uppercase tracking-widest text-[#8B949E]">Painel do Cliente</span>
-            <span className="font-black text-sm uppercase tracking-tighter">CENTRAL <span className="text-[#B8860B]">REMOÇÃO</span></span>
+    <div className="min-h-screen bg-[#0B0E14] text-gray-100 font-sans flex flex-col items-center relative overflow-hidden selection:bg-[#F59E0B] selection:text-white">
+
+      {/* Background Ambience */}
+      <div className="fixed top-0 left-0 w-full h-full pointer-events-none z-0">
+        <div className="absolute top-[-10%] left-[20%] w-[500px] h-[500px] bg-[#F59E0B]/10 rounded-full blur-[100px] opacity-20"></div>
+        <div className="absolute bottom-[-10%] right-[10%] w-[400px] h-[400px] bg-blue-500/10 rounded-full blur-[100px] opacity-20"></div>
+      </div>
+
+      {/* Header */}
+      <header className="w-full px-6 py-4 flex justify-between items-center fixed top-0 z-50 bg-[#0B0E14]/80 backdrop-blur-md border-b border-white/5">
+        <div className="flex items-center gap-3 animate-in fade-in duration-700">
+          <div className="w-10 h-10 rounded-full bg-[#F59E0B]/20 flex items-center justify-center text-[#F59E0B] border border-[#F59E0B]/30">
+            <TrendingUp size={20} />
+          </div>
+          <div className="flex flex-col leading-tight">
+            <span className="text-[10px] uppercase font-bold tracking-widest text-gray-400">Painel do Cliente</span>
+            <div className="font-extrabold text-sm tracking-wide text-white">
+              CENTRAL <span className="text-[#F59E0B]">REMOÇÃO</span>
+            </div>
           </div>
         </div>
-        <button onClick={onLogout} className="p-3 bg-white/5 rounded-2xl text-[#8B949E] hover:text-red-400 hover:bg-red-500/10 transition-all active:scale-90"><LogOut size={20} /></button>
+        <button
+          onClick={onLogout}
+          className="group w-10 h-10 rounded-full bg-[#161B22] border border-gray-700 flex items-center justify-center hover:bg-red-900/20 transition-all duration-300 shadow-sm"
+        >
+          <LogOut size={18} className="text-gray-400 group-hover:text-red-400 transition-colors" />
+        </button>
       </header>
 
-      <main className="max-w-lg mx-auto p-6 space-y-8">
-        <div className="space-y-1 py-4 animate-in">
-          <h2 className="text-5xl font-black tracking-tighter text-white">Olá, {currentUser.name.split(' ')[0]}</h2>
-          <p className="text-xs text-[#8B949E] font-bold uppercase tracking-[0.3em] ml-1">Acompanhe sua blindagem real</p>
+      {/* Main Content */}
+      <main className="flex-grow flex flex-col items-center justify-center w-full max-w-lg px-4 py-24 sm:py-28 relative z-10">
+
+        {/* Welcome Section */}
+        <div className="text-center mb-8 animate-in slide-in-from-bottom-5 duration-700">
+          <h1 className="font-extrabold text-5xl md:text-6xl text-white mb-2 tracking-tight">
+            Olá, <span className="text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-400">{currentUser.name.split(' ')[0]}</span>
+          </h1>
+          <p className="text-xs md:text-sm font-bold tracking-[0.2em] text-gray-500 uppercase">
+            Acompanhe sua blindagem real
+          </p>
         </div>
 
-        {/* Status do Processo */}
-        <div className="bg-[#161B22] border border-[#30363D] rounded-[3rem] p-8 shadow-2xl space-y-8 relative overflow-hidden group animate-in delay-100">
-          <div className="flex justify-between items-start">
-            <div>
-              <p className="text-[10px] font-black text-[#8B949E] uppercase tracking-widest mb-1">Evolução Sistêmica</p>
-              <span className={`px-4 py-2 rounded-full text-[10px] font-black uppercase border ${progress === 100 ? 'bg-green-500/10 text-green-500 border-green-500/20' : 'bg-blue-500/10 text-blue-500 border-blue-500/20'}`}>
-                {progress === 100 ? 'Processo Finalizado' : 'Processando Baixas'}
-              </span>
+        {/* Status Card */}
+        <div className="w-full bg-[#161B22]/80 backdrop-blur-md rounded-3xl border border-gray-800 shadow-2xl overflow-hidden animate-in slide-in-from-bottom-8 duration-700 delay-100">
+
+          {/* Progress Header */}
+          <div className="p-6 md:p-8 border-b border-gray-800">
+            <div className="flex justify-between items-end mb-6">
+              <div>
+                <p className="text-[10px] font-bold tracking-wider text-gray-500 uppercase mb-2">Evolução Sistêmica</p>
+                <div className={`inline-flex items-center px-2 py-1 rounded border ${progress === 100 ? 'bg-green-900/30 border-green-800' : 'bg-blue-900/30 border-blue-800'}`}>
+                  <span className={`w-1.5 h-1.5 rounded-full mr-2 animate-pulse ${progress === 100 ? 'bg-green-500' : 'bg-blue-500'}`}></span>
+                  <span className={`text-[10px] font-bold uppercase tracking-wide ${progress === 100 ? 'text-green-400' : 'text-blue-400'}`}>
+                    {progress === 100 ? 'Processo Finalizado' : 'Em Andamento'}
+                  </span>
+                </div>
+              </div>
+              <div className="text-right">
+                <span className="font-black italic text-5xl text-white leading-none block">{progress}%</span>
+                <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block mt-1">Concluído</span>
+              </div>
             </div>
-            <div className="flex flex-col items-end">
-              <span className="text-6xl font-black italic text-white group-hover:text-[#B8860B] transition-colors duration-500">{progress}%</span>
-              <span className="text-[10px] font-black text-[#484F58] uppercase">Concluído</span>
+
+            {/* Progress Bar */}
+            <div className="relative w-full h-3 bg-gray-800 rounded-full overflow-hidden">
+              <div
+                className={`absolute top-0 left-0 h-full rounded-full transition-all duration-[1500ms] ease-out ${progress >= 90 ? 'bg-[#F59E0B] shadow-[0_0_15px_rgba(245,158,11,0.5)]' : 'bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.5)]'}`}
+                style={{ width: `${progress}%` }}
+              ></div>
             </div>
           </div>
 
-          <div className="w-full h-5 bg-[#0D1117] rounded-full overflow-hidden border border-[#30363D] p-1 shadow-inner">
-            <div
-              className={`h-full rounded-full transition-all duration-[2000ms] ease-out ${progress >= 90 ? 'bg-[#B8860B] shadow-[0_0_15px_rgba(184,134,11,0.4)]' : 'bg-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.4)]'}`}
-              style={{ width: `${progress}%` }}
-            />
-          </div>
-
-          <div className="pt-4 grid grid-cols-1 gap-3">
+          {/* Organs List */}
+          <div className="p-6 md:p-8 space-y-3 bg-[#11141c]">
             {[
-              { name: 'Serasa Experian', completed: list?.organs.serasa },
-              { name: 'Boa Vista SCPC', completed: list?.organs.boaVista },
-              { name: 'SPC Brasil', completed: list?.organs.spc },
-              { name: 'Cenprot Nacional', completed: list?.organs.cenprotNacional },
-              { name: 'Cenprot SP (Cartórios)', completed: list?.organs.cenprotSP }
+              { name: 'SERASA EXPERIAN', completed: list?.organs.serasa },
+              { name: 'BOA VISTA SCPC', completed: list?.organs.boaVista },
+              { name: 'SPC BRASIL', completed: list?.organs.spc },
+              { name: 'CENPROT NACIONAL', completed: list?.organs.cenprotNacional },
+              { name: 'CENPROT SP (CARTÓRIOS)', completed: list?.organs.cenprotSP }
             ].map((organ, idx) => (
-              <div key={idx} className={`flex items-center justify-between p-5 rounded-[1.5rem] border transition-all duration-300 ${organ.completed ? 'bg-green-500/5 border-green-500/20' : 'bg-[#0D1117] border-[#30363D]'}`}>
+              <div key={idx} className="group flex items-center justify-between p-4 bg-[#1F2937] rounded-xl border border-gray-700 hover:border-[#F59E0B]/50 transition-all duration-300 hover:shadow-lg hover:-translate-y-1 cursor-default">
                 <div className="flex items-center gap-4">
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center border transition-all ${organ.completed ? 'bg-green-500 border-green-500/10 text-white shadow-lg shadow-green-500/10' : 'bg-[#161B22] border-[#30363D] text-[#484F58]'}`}>
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-transform group-hover:scale-110 ${organ.completed ? 'bg-green-900/20 text-green-500' : 'bg-gray-800 text-gray-500'}`}>
                     {organ.completed ? <CheckCircle2 size={20} /> : <ShieldCheck size={20} />}
                   </div>
-                  <span className="text-xs font-black uppercase tracking-widest text-white/90">{organ.name}</span>
+                  <span className="font-bold text-sm tracking-wide text-gray-200 uppercase">{organ.name}</span>
                 </div>
-                <span className={`text-[9px] font-black uppercase px-3 py-1.5 rounded-xl ${organ.completed ? 'text-green-500 bg-green-500/10' : 'text-[#484F58] bg-[#161B22]'}`}>
+                <span className={`px-3 py-1 rounded-md text-[10px] font-bold border uppercase tracking-wider ${organ.completed ? 'bg-green-900/20 text-green-400 border-green-900/30' : 'bg-gray-800 text-gray-500 border-gray-700'}`}>
                   {organ.completed ? 'Baixado' : 'Aguardando'}
                 </span>
               </div>
@@ -96,86 +118,25 @@ const ClientPortal: React.FC<ClientPortalProps> = ({ currentUser, onLogout, list
           </div>
         </div>
 
-        {/* Vitrine de Serviços do Parceiro */}
-        {activeServices.length > 0 && (
-          <div className="space-y-4 animate-in delay-200">
-            <h3 className="text-xl font-black flex items-center gap-2 px-1">
-              <Zap className="text-[#B8860B]" size={22} />
-              Nossas Soluções
-            </h3>
-            <div className="grid grid-cols-1 gap-4">
-              {activeServices.map(service => (
-                <div key={service.id} className="bg-[#161B22] border border-[#30363D] p-6 rounded-[2.5rem] hover:border-[#B8860B]/50 transition-all flex items-center gap-5 shadow-lg group active:scale-95">
-                  <div className="w-14 h-14 rounded-2xl bg-[#B8860B]/10 text-[#B8860B] flex items-center justify-center shrink-0 shadow-inner group-hover:scale-110 transition-transform">
-                    <Zap size={28} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h4 className="font-black text-white text-sm uppercase tracking-tight">{service.title}</h4>
-                    <p className="text-xs text-[#8B949E] line-clamp-2 font-medium mt-1 leading-relaxed">{service.description}</p>
-                  </div>
-                  <button onClick={handleSupportClick} className="p-4 rounded-2xl bg-[#0D1117] text-[#B8860B] border border-[#30363D] hover:bg-[#B8860B] hover:text-white transition-all shadow-lg active:scale-90">
-                    <ChevronRight size={20} />
-                  </button>
-                </div>
-              ))}
-            </div>
+        {/* Footer */}
+        <div className="mt-12 text-center opacity-60 animate-in fade-in duration-700 delay-500">
+          <p className="text-[10px] uppercase tracking-[0.2em] font-medium text-gray-400 mb-2">Atendimento Exclusivo Por</p>
+          <div className="font-black text-sm tracking-wide text-white">
+            {reseller?.name || 'Central Remoção'}
           </div>
-        )}
-
-        {/* Ações e Suporte */}
-        <div className="grid grid-cols-1 gap-5 pt-4 animate-in delay-300">
-          <button onClick={() => setShowRenewalModal(true)} className="w-full bg-[#B8860B] hover:bg-[#9a7009] text-white py-6 rounded-[2.5rem] font-black text-2xl shadow-2xl shadow-[#B8860B]/20 flex items-center justify-center gap-4 transition-all hover:scale-[1.03] active:scale-95">
-            <Zap size={32} /> Renovar Blindagem
-          </button>
-          <button onClick={handleSupportClick} className="w-full bg-white/5 text-[#8B949E] py-6 rounded-[2.5rem] font-black text-sm flex items-center justify-center gap-3 border border-white/5 hover:bg-white/10 hover:text-white transition-all active:scale-95">
-            <MessageCircle size={24} className="text-[#B8860B]" /> Falar com Especialista
-          </button>
+          <div className="w-12 h-0.5 bg-[#F59E0B]/50 mx-auto mt-4 rounded-full"></div>
         </div>
 
-        {/* Footer do Revendedor */}
-        <div className="text-center space-y-3 pt-6 animate-in delay-500">
-          <div className="h-[1px] w-12 bg-[#30363D] mx-auto"></div>
-          <div>
-            <p className="text-[10px] font-black uppercase tracking-[0.4em] text-[#484F58]">Atendimento exclusivo por</p>
-            <p className="text-md font-black text-white/80 tracking-tighter mt-1">{reseller?.name || 'Central Remoção'}</p>
-          </div>
-        </div>
       </main>
 
-      {/* Modal de Renovação (simplificado para manter foco no WhatsApp) */}
-      {showRenewalModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/95 backdrop-blur-md animate-in fade-in duration-300">
-          <div className="bg-[#161B22] border border-[#30363D] rounded-[3.5rem] w-full max-w-sm p-12 space-y-8 relative shadow-2xl animate-in zoom-in-95">
-            <button onClick={() => setShowRenewalModal(false)} className="absolute top-8 right-8 text-[#8B949E] hover:text-white transition-all active:scale-90"><X size={36} /></button>
+      {/* Floating Chat Button */}
+      <button
+        onClick={handleSupportClick}
+        className="fixed bottom-6 right-6 w-14 h-14 bg-[#F59E0B] text-[#0B0E14] rounded-full shadow-lg shadow-[#F59E0B]/30 flex items-center justify-center hover:scale-110 hover:shadow-xl hover:shadow-[#F59E0B]/50 transition-all duration-300 z-50 animate-bounce group"
+      >
+        <MessageCircle size={28} className="group-hover:rotate-12 transition-transform" />
+      </button>
 
-            <div className="text-center space-y-3">
-              <div className="w-24 h-24 bg-[#B8860B]/10 text-[#B8860B] rounded-[2.5rem] flex items-center justify-center mx-auto mb-6 border border-[#B8860B]/20 shadow-inner"><CreditCard size={48} /></div>
-              <h3 className="text-3xl font-black text-white">Novo Ciclo</h3>
-              <p className="text-sm text-[#8B949E] leading-relaxed">Proteja seu histórico de crédito por mais 90 dias com nossa blindagem 100% segura.</p>
-            </div>
-
-            <div className="bg-white p-6 rounded-[3.5rem] shadow-2xl border-[16px] border-[#0D1117] aspect-square flex items-center justify-center overflow-hidden">
-              {reseller?.paymentConfig?.pixQrCode ? (
-                <img src={reseller.paymentConfig.pixQrCode} className="w-full h-full object-contain" alt="QR Code PIX" />
-              ) : (
-                <div className="text-center space-y-3 opacity-20">
-                  <QrCode size={140} className="text-black mx-auto" />
-                  <p className="text-[10px] font-black text-black uppercase tracking-widest">Aguardando QR Code</p>
-                </div>
-              )}
-            </div>
-
-            <div className="space-y-4">
-              <button onClick={handleCopyPix} className={`w-full py-5 rounded-[1.5rem] font-black text-xs uppercase flex items-center justify-center gap-3 transition-all active:scale-95 ${copied ? 'bg-green-600 text-white shadow-xl shadow-green-600/20' : 'bg-[#0D1117] text-white border border-[#30363D] hover:border-[#B8860B]'}`}>
-                {copied ? <><CheckCircle2 size={18} /> Código Copiado!</> : <><Copy size={18} /> Copiar Chave PIX</>}
-              </button>
-              <button onClick={handleSupportClick} className="w-full bg-[#25D366] text-white py-5 rounded-[1.5rem] font-black text-xs uppercase flex items-center justify-center gap-3 shadow-xl shadow-green-500/20 active:scale-95">
-                <MessageCircle size={18} /> Enviar Comprovante
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

@@ -12,8 +12,48 @@ interface ListManagerProps {
 }
 
 const ListManager: React.FC<ListManagerProps> = ({ lists, setLists, currentUser, resellers }) => {
+  // Modal State
+  const [isModalOpen, setIsModalOpen] = React.useState(false);
+  const [newClientDoc, setNewClientDoc] = React.useState('');
+  const [isLoading, setIsLoading] = React.useState(false);
+
   // Agora permitimos que tanto Admin quanto Reseller tenham controle manual
   const hasControlAccess = currentUser.role === 'admin' || currentUser.role === 'reseller';
+
+  const handleCreateList = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newClientDoc) return;
+    setIsLoading(true);
+    try {
+      const res = await fetch('/api/lists', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ resellerId: currentUser.id, clientDocument: newClientDoc })
+      });
+      if (!res.ok) throw new Error('Erro ao criar protocolo');
+      const newList = await res.json();
+
+      // Add to list with default structure
+      const formattedList: CreditList = {
+        id: newList.id || `temp-${Date.now()}`,
+        resellerId: currentUser.id,
+        clientDocument: newClientDoc,
+        startDate: new Date().toISOString(),
+        manualConclusion: false,
+        status: 'processing',
+        organs: { serasa: false, boaVista: false, spc: false, cenprotNacional: false, cenprotSP: false }
+      };
+
+      setLists([formattedList, ...lists]);
+      setIsModalOpen(false);
+      setNewClientDoc('');
+      alert('Protocolo criado com sucesso!');
+    } catch (err: any) {
+      alert(err.message || 'Erro ao criar');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const confirmCompletion = async (id: string) => {
     if (!hasControlAccess) return;
@@ -119,7 +159,45 @@ const ListManager: React.FC<ListManagerProps> = ({ lists, setLists, currentUser,
             <p className="text-xs text-[#8B949E] font-bold uppercase tracking-widest">Acompanhamento e Baixa Manual Habilitada</p>
           </div>
         </div>
+
+        {hasControlAccess && (
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="relative z-10 px-6 py-3 bg-[#B8860B] hover:bg-[#9a7009] text-white rounded-xl font-bold text-sm shadow-lg shadow-[#B8860B]/20 transition-all flex items-center gap-2"
+          >
+            <Target size={18} /> Novo Protocolo
+          </button>
+        )}
       </div>
+
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-[#161B22] border border-[#30363D] rounded-[2.5rem] w-full max-w-md p-8 shadow-2xl animate-in zoom-in-95 relative">
+            <button onClick={() => setIsModalOpen(false)} className="absolute top-6 right-6 text-[#8B949E] hover:text-white"><AlertCircle className="rotate-45" size={24} /></button>
+
+            <h3 className="text-2xl font-black text-white mb-2">Novo Cliente</h3>
+            <p className="text-sm text-[#8B949E] mb-6">Inicie o processo de blindagem para um novo CPF ou CNPJ.</p>
+
+            <form onSubmit={handleCreateList} className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold text-[#8B949E] uppercase ml-1">Documento (CPF/CNPJ)</label>
+                <input
+                  autoFocus
+                  required
+                  type="text"
+                  value={newClientDoc}
+                  onChange={e => setNewClientDoc(e.target.value)}
+                  placeholder="000.000.000-00"
+                  className="w-full bg-[#0D1117] border border-[#30363D] rounded-xl px-4 py-4 text-white font-bold focus:border-[#B8860B] outline-none"
+                />
+              </div>
+              <button disabled={isLoading} className="w-full bg-[#B8860B] hover:bg-[#9a7009] text-white py-4 rounded-xl font-black text-sm uppercase tracking-wider shadow-lg disabled:opacity-50 transition-all">
+                {isLoading ? 'Criando...' : 'Iniciar Blindagem'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {lists.map((list) => {

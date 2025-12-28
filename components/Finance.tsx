@@ -26,9 +26,6 @@ const Finance: React.FC<FinanceProps> = ({
 }) => {
   const isAdmin = currentUser.role === 'admin';
   const [copied, setCopied] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [editSettings, setEditSettings] = useState({ ...platformSettings });
   const [resellerPixKey, setResellerPixKey] = useState(currentUser.pixKey || '');
 
   // Commissions State
@@ -103,27 +100,77 @@ const Finance: React.FC<FinanceProps> = ({
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
     alert('Copiado!');
-    alert('Copiado!');
   };
 
   const handleRenewPix = async () => {
+    // Validate Document (CPF/CNPJ)
+    const doc = currentUser.document?.replace(/\D/g, '') || '';
+    if (doc.length !== 11 && doc.length !== 14) {
+      alert('⚠️ Atenção: Para gerar o PIX, você precisa preencher um CPF ou CNPJ válido no painel "Meus Dados".');
+      return;
+    }
+
     setLoadingPix(true);
     try {
+      // 1. AUTO-SAVE PROFILE (Best Effort - Non-Blocking)
+      try {
+        await fetch(`/api/resellers/${currentUser.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: currentUser.name,
+            document: currentUser.document,
+            whatsapp: currentUser.whatsapp,
+            pixKey: resellerPixKey
+          })
+        });
+      } catch (saveErr) {
+        console.warn('Auto-save failed, proceeding with direct data:', saveErr);
+      }
+
+      // 2. GENERATE PIX
       const amount = 29.90; // Default Renewal Price
       const res = await fetch('/api/asaas/create-pix-charge', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: currentUser.id, amount, type: 'plan_renewal' })
+        body: JSON.stringify({
+          userId: currentUser.id,
+          amount,
+          type: 'plan',
+          customerData: {
+            name: currentUser.name,
+            document: currentUser.document,
+            whatsapp: currentUser.whatsapp
+          }
+        })
       });
       const data = await res.json();
+
       if (data.success) {
         setPixData({ ...data, isRenewal: true });
         setShowDepositModal(true);
+
+        // Start Polling
+        const pollInterval = setInterval(async () => {
+          try {
+            const check = await fetch(`/api/asaas/check-payment/${data.paymentId}`);
+            const status = await check.json();
+            if (status.status === 'paid') {
+              clearInterval(pollInterval);
+              alert('✅ Pagamento Confirmado! Seu plano foi renovado com sucesso.');
+              window.location.reload();
+            }
+          } catch (e) { }
+        }, 3000);
+
+        // Stop polling after 5 minutes
+        setTimeout(() => clearInterval(pollInterval), 300000);
+
       } else {
-        alert('Erro ao gerar PIX de renovação: ' + data.error);
+        alert('❌ Erro ao gerar PIX: ' + (data.error || 'Erro desconhecido. Verifique seus dados.'));
       }
-    } catch (error) {
-      alert('Erro de conexão.');
+    } catch (error: any) {
+      alert('❌ Erro: ' + error.message);
     } finally {
       setLoadingPix(false);
     }
@@ -184,40 +231,7 @@ const Finance: React.FC<FinanceProps> = ({
     }
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => setEditSettings({ ...editSettings, pixQrCodeUrl: reader.result as string });
-      reader.readAsDataURL(file);
-    }
-  };
 
-  const handleSave = async () => {
-    setIsSaving(true);
-    try {
-      const response = await fetch('/api/settings', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(editSettings)
-      });
-
-      if (!response.ok) throw new Error('Erro ao salvar configurações');
-
-      const data = await response.json();
-      setPlatformSettings({
-        ...platformSettings,
-        pixKey: data.pix_key,
-        pixQrCodeUrl: data.pix_qr_code_url,
-        paymentLink: data.payment_link
-      });
-      alert('Dados de recebimento salvos com sucesso!');
-    } catch (err: any) {
-      alert(err.message);
-    } finally {
-      setIsSaving(false);
-    }
-  };
 
   if (activeTab === 'finance-deposits') {
     return (
@@ -249,20 +263,24 @@ const Finance: React.FC<FinanceProps> = ({
 
         {/* Sub-Navigation for Finance Deposits Section */}
         <div className="flex justify-center gap-4">
-          <button
-            onClick={() => setSubTab('settings')}
-            className={`px-6 py-2 rounded-full text-xs font-black uppercase tracking-widest transition-all ${subTab === 'settings' ? 'bg-[#B8860B] text-white' : 'bg-[#161B22] text-[#8B949E] border border-[#30363D]'}`}
-          >
-            {isAdmin ? 'Configurações' : 'Meus Dados'}
-          </button>
+          {/* Button hidden for Admin */}
+          {!isAdmin && (
+            <button
+              onClick={() => setSubTab('settings')}
+              className={`px-6 py-2 rounded-full text-xs font-black uppercase tracking-widest transition-all ${subTab === 'settings' ? 'bg-[#B8860B] text-white' : 'bg-[#161B22] text-[#8B949E] border border-[#30363D]'}`}
+            >
+              Meus Dados
+            </button>
+          )}
+          {/* Commissions Logic: Default for Admin */}
           <button
             onClick={() => setSubTab('commissions')}
-            className={`px-6 py-2 rounded-full text-xs font-black uppercase tracking-widest transition-all ${subTab === 'commissions' ? 'bg-[#B8860B] text-white' : 'bg-[#161B22] text-[#8B949E] border border-[#30363D]'}`}
+            className={`px-6 py-2 rounded-full text-xs font-black uppercase tracking-widest transition-all ${subTab === 'commissions' || isAdmin ? 'bg-[#B8860B] text-white' : 'bg-[#161B22] text-[#8B949E] border border-[#30363D]'}`}
           >
             {isAdmin ? 'Gestão de Comissões' : 'Meus Comprovantes'}
           </button>
         </div>
-        {subTab === 'commissions' && (
+        {(subTab === 'commissions' || isAdmin) && (
           <div className="space-y-10 animate-in fade-in slide-in-from-bottom-5">
             {isAdmin && (
               <>
@@ -419,74 +437,7 @@ const Finance: React.FC<FinanceProps> = ({
           </div>
         )}
 
-        {/* Master Configuration Area (Admin) */}
-        {(isAdmin && subTab === 'settings') && (
-          <div className="bg-[#161B22] border-2 border-[#B8860B]/20 rounded-[3rem] p-10 space-y-10 shadow-2xl relative">
-            <div className="flex items-center gap-5">
-              <div className="w-16 h-16 bg-[#B8860B]/10 rounded-2xl flex items-center justify-center text-[#B8860B]">
-                <Settings size={32} />
-              </div>
-              <div>
-                <h3 className="text-2xl font-black text-white uppercase tracking-tighter">Configurações Master de Pagamento</h3>
-                <p className="text-xs text-[#8B949E] font-medium">Configure como seus parceiros farão os pagamentos das licenças.</p>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-              <div className="space-y-6">
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-[#8B949E] uppercase ml-1 tracking-widest">Chave PIX / Copia e Cola</label>
-                  <textarea
-                    className="w-full bg-[#0D1117] border border-[#30363D] rounded-2xl px-6 py-5 text-[10px] font-mono font-bold text-[#B8860B] outline-none h-40 focus:border-[#B8860B] transition-all"
-                    value={editSettings.pixKey}
-                    onChange={(e) => setEditSettings({ ...editSettings, pixKey: e.target.value })}
-                    placeholder="Insira o código PIX completo aqui..."
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-[#8B949E] uppercase ml-1 tracking-widest">Link Externo (Cartão/Mercado Pago)</label>
-                  <div className="relative">
-                    <LinkIcon size={18} className="absolute left-5 top-1/2 -translate-y-1/2 text-[#484F58]" />
-                    <input
-                      type="text"
-                      className="w-full bg-[#0D1117] border border-[#30363D] rounded-2xl pl-14 pr-6 py-5 text-sm font-bold text-white outline-none focus:border-[#B8860B] transition-all"
-                      value={editSettings.paymentLink}
-                      onChange={(e) => setEditSettings({ ...editSettings, paymentLink: e.target.value })}
-                      placeholder="https://mpago.la/..."
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-6">
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-[#8B949E] uppercase ml-1 tracking-widest">Imagem do QR Code PIX</label>
-                  <div
-                    onClick={() => fileInputRef.current?.click()}
-                    className="w-full h-56 bg-[#0D1117] border-2 border-dashed border-[#30363D] rounded-[2.5rem] flex flex-col items-center justify-center cursor-pointer hover:border-[#B8860B]/50 overflow-hidden transition-all group"
-                  >
-                    <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept="image/*" />
-                    {editSettings.pixQrCodeUrl ? (
-                      <img src={editSettings.pixQrCodeUrl} className="w-full h-full object-contain p-6" alt="QR Code" />
-                    ) : (
-                      <div className="text-center space-y-3">
-                        <Upload size={40} className="text-[#B8860B] mx-auto group-hover:scale-110 transition-transform" />
-                        <span className="text-[10px] font-black text-[#484F58] uppercase block">Subir Foto do QR Code</span>
-                      </div>
-                    )}
-                  </div>
-                  {editSettings.pixQrCodeUrl && (
-                    <button onClick={() => setEditSettings({ ...editSettings, pixQrCodeUrl: '' })} className="text-[9px] font-black text-red-500 uppercase ml-2 hover:underline">Remover Foto</button>
-                  )}
-                </div>
-
-                <button onClick={handleSave} disabled={isSaving} className="w-full bg-[#B8860B] hover:bg-[#9a7009] text-white py-6 rounded-[2rem] font-black text-xs uppercase tracking-[0.2em] shadow-2xl transition-all flex items-center justify-center gap-3">
-                  {isSaving ? 'Salvando Configurações...' : <><Save size={20} /> Salvar Alterações Financeiras</>}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+        {/* Master Configuration Area Removed */}
 
         {/* Reseller Payment View */}
         {(!isAdmin && subTab === 'settings') && (
@@ -613,45 +564,127 @@ const Finance: React.FC<FinanceProps> = ({
               </div>
             </div>
 
-            <div className="bg-[#161B22] border border-[#30363D] p-12 rounded-[3rem] shadow-2xl space-y-10">
-              <h4 className="text-[10px] font-black text-white uppercase tracking-[0.3em] flex items-center gap-3">
-                <Landmark size={20} className="text-[#B8860B]" /> Métodos Disponíveis
-              </h4>
-              <div className="space-y-5">
-                {platformSettings.paymentLink && (
-                  <a href={platformSettings.paymentLink} target="_blank" className="w-full flex items-center justify-between bg-blue-600 hover:bg-blue-700 px-8 py-6 rounded-3xl font-black text-xs uppercase text-white shadow-xl transition-all active:scale-95">
-                    Pagar via Cartão / Link <ExternalLink size={20} />
-                  </a>
-                )}
-                <button onClick={handleCopyPix} className={`w-full flex items-center justify-between px-8 py-6 rounded-3xl font-black text-xs uppercase border-2 transition-all active:scale-95 ${copied ? 'bg-green-500 text-white border-green-500' : 'bg-transparent text-white border-[#30363D] hover:border-[#B8860B]'}`}>
-                  {copied ? 'Copiado para Área de Transferência' : 'Copia e Cola PIX'} <Copy size={20} />
-                </button>
+            {/* SECTION: PLAN & SUBSCRIPTION */}
+            <div className="bg-[#161B22] border border-[#30363D] p-10 rounded-[3rem] shadow-2xl space-y-8">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 bg-[#B8860B]/10 rounded-2xl flex items-center justify-center text-[#B8860B]"><ShieldCheck size={28} /></div>
+                <div><h3 className="text-xl font-black text-white uppercase tracking-tighter">Minha Assinatura</h3><p className="text-xs text-[#8B949E]">Gerencie seu plano de revenda.</p></div>
               </div>
-              <div className="pt-6 border-t border-[#30363D] text-center">
-                <p className="text-[10px] text-[#484F58] font-black uppercase leading-relaxed italic">
-                  * Os créditos são liberados após a confirmação do gateway de pagamentos.
-                </p>
+
+              <div className="bg-[#0D1117] border border-[#30363D] rounded-3xl p-6 space-y-4">
+                <div className="flex justify-between items-center pb-4 border-b border-[#30363D]">
+                  <span className="text-xs font-bold text-[#8B949E] uppercase">Plano Atual</span>
+                  <span className="text-sm font-black text-white uppercase">{currentUser.plan || 'Gratuito'}</span>
+                </div>
+                <div className="flex justify-between items-center pb-4 border-b border-[#30363D]">
+                  <span className="text-xs font-bold text-[#8B949E] uppercase">Status</span>
+                  <span className={`text-xs font-black uppercase px-3 py-1 rounded-lg ${currentUser.status === 'active' ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'}`}>
+                    {currentUser.status === 'active' ? 'Ativo' : 'Pendente / Vencido'}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-xs font-bold text-[#8B949E] uppercase">Vencimento</span>
+                  <span className="text-sm font-black text-white">
+                    {currentUser.expiryDate ? new Date(currentUser.expiryDate).toLocaleDateString() : '-'}
+                  </span>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <p className="text-[10px] text-[#484F58] font-bold uppercase text-center">Precisa renovar ou fazer um upgrade?</p>
+                <button
+                  onClick={handleRenewPix}
+                  disabled={loadingPix}
+                  className="w-full bg-[#161B22] border border-[#B8860B] text-[#B8860B] hover:bg-[#B8860B] hover:text-white py-4 rounded-xl font-black text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-2"
+                >
+                  {loadingPix ? <Loader2 className="animate-spin" size={16} /> : <QrCode size={18} />}
+                  {loadingPix ? 'Gerando PIX...' : 'Gerar PIX de Renovação (R$ 29,90)'}
+                </button>
               </div>
             </div>
 
-            <div className="flex flex-col items-center justify-center">
-              <div className="bg-white p-8 rounded-[3.5rem] shadow-2xl border-[12px] border-[#161B22] w-full max-w-sm text-center space-y-6">
-                <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Pague escaneando o código</p>
-                <div className="w-full aspect-square bg-gray-50 rounded-3xl flex items-center justify-center p-3 overflow-hidden border border-gray-100">
-                  {platformSettings.pixQrCodeUrl ? (
-                    <img src={platformSettings.pixQrCodeUrl} className="w-full h-full object-contain" alt="QR Code" />
-                  ) : (
-                    <QrCode size={140} className="text-gray-200" />
-                  )}
+
+
+
+          </div>
+
+        )}
+
+        {/* Deposit Modal (Added for Reseller Scope) */}
+        {
+          showDepositModal && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+              <div className="bg-[#161B22] border border-[#30363D] w-full max-w-md rounded-3xl p-8 relative animate-in zoom-in-50 duration-200">
+                <button
+                  onClick={() => { setShowDepositModal(false); setPixData(null); setDepositValue(''); }}
+                  className="absolute top-6 right-6 text-[#8B949E] hover:text-white transition-colors"
+                >
+                  <X size={20} />
+                </button>
+
+                <div className="text-center space-y-2 mb-8">
+                  <div className="w-16 h-16 bg-[#B8860B]/20 rounded-2xl flex items-center justify-center text-[#B8860B] mx-auto mb-4">
+                    <QrCode size={32} />
+                  </div>
+                  <h3 className="text-2xl font-black text-white uppercase tracking-tight">Recarga via PIX</h3>
+                  <p className="text-[#8B949E] text-sm">Adicione saldo instantaneamente.</p>
                 </div>
-                <div className="bg-[#f0f9ff] py-3 rounded-2xl border border-[#bae6fd]">
-                  <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest">Compensação em Segundos</span>
-                </div>
+
+                {!pixData ? (
+                  <div className="space-y-6">
+                    <div>
+                      <label className="text-[10px] uppercase font-black text-[#8B949E] ml-2 mb-2 block">Valor da Recarga (R$)</label>
+                      <div className="relative">
+                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#8B949E] font-bold">R$</span>
+                        <input
+                          type="number"
+                          value={depositValue}
+                          onChange={(e) => setDepositValue(e.target.value)}
+                          className="w-full bg-[#0D1117] border border-[#30363D] rounded-xl px-12 py-4 text-white font-bold outline-none focus:border-[#B8860B] transition-colors"
+                          placeholder="0.00"
+                        />
+                      </div>
+                    </div>
+                    <button
+                      onClick={handleGeneratePix}
+                      disabled={loadingPix || !depositValue}
+                      className="w-full bg-[#B8860B] hover:bg-[#9a7009] disabled:opacity-50 disabled:cursor-not-allowed text-white py-4 rounded-xl font-black text-xs uppercase tracking-widest shadow-lg flex items-center justify-center gap-2"
+                    >
+                      {loadingPix ? <Loader2 className="animate-spin" size={16} /> : 'Gerar PIX Copia e Cola'}
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-6 animate-in slide-in-from-bottom-5">
+                    <div className="bg-white p-4 rounded-2xl w-fit mx-auto">
+                      <img src={`data:image/png;base64,${pixData.encodedImage}`} alt="QR Code PIX" className="w-48 h-48" />
+                    </div>
+                    <div className="bg-[#0D1117] p-4 rounded-xl border border-[#30363D] flex items-center justify-between gap-4">
+                      <div className="truncate text-[10px] text-[#8B949E] font-mono select-all">
+                        {pixData.payload}
+                      </div>
+                      <button
+                        onClick={() => copyToClipboard(pixData.payload)}
+                        className="text-[#B8860B] hover:text-white transition-colors flex-shrink-0"
+                      >
+                        <Copy size={16} />
+                      </button>
+                    </div>
+                    <p className="text-center text-xs text-[#8B949E] px-4">
+                      Após o pagamento, o saldo será liberado automaticamente em alguns instantes.
+                    </p>
+                    <button
+                      onClick={() => { setShowDepositModal(false); setPixData(null); setDepositValue(''); }}
+                      className="w-full bg-[#30363D] hover:bg-[#404751] text-white py-4 rounded-xl font-bold text-xs uppercase"
+                    >
+                      Fechar
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
-          </div>
-        )}
-      </div>
+          )
+        }
+      </div >
     );
   }
 
@@ -661,7 +694,7 @@ const Finance: React.FC<FinanceProps> = ({
       <div className="flex items-center justify-between px-4">
         <h3 className="text-2xl font-black text-white uppercase tracking-tighter">Extrato da Carteira</h3>
         <div className="bg-[#161B22] px-6 py-3 rounded-2xl border border-[#30363D] text-sm font-black">
-          R$ {isAdmin ? '1.250,00' : '0,00'}
+          R$ {Number(currentUser.balance || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
         </div>
       </div>
 

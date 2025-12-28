@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { TrendingUp, Mail, Lock, User as UserIcon, ArrowRight, ShieldCheck, Clock, Shield, ChevronRight, Zap } from 'lucide-react';
+import { TrendingUp, Mail, Lock, User as UserIcon, ArrowRight, ShieldCheck, Clock, ChevronRight } from 'lucide-react';
 import { User, Reseller, CreditList } from '../types';
 
 interface AuthScreenProps {
@@ -74,7 +74,6 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin, onRegister, resellers,
       }
 
       if (authType === 'login') {
-        console.log('Resposta do servidor:', data);
         if (!data.profile) {
           throw new Error(`Perfil não encontrado para o ID: ${data.user.id}. Verifique se o registro foi concluído.`);
         }
@@ -91,7 +90,6 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin, onRegister, resellers,
         onLogin(user);
       } else {
         alert('Cadastro realizado com sucesso! Aguarde a aprovação do administrador.');
-        // No registro, não tentamos logar automaticamente para evitar erro de profile inexistente
         setAuthType('login');
       }
     } catch (error: any) {
@@ -99,202 +97,171 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin, onRegister, resellers,
     }
   };
 
-  // Funções de Teste Rápido
-  const loginAsAdmin = () => {
-    onLogin({ id: 'admin-1', name: 'Admin Master', role: 'admin', status: 'active' });
-  };
-
-  const loginAsReseller = () => {
-    const reseller = resellers[0];
-    onLogin({
-      id: `res-${reseller.id}`,
-      name: reseller.name,
-      email: reseller.email,
-      role: 'reseller',
-      status: 'active',
-      resellerId: reseller.id
-    });
-  };
-
   return (
-    <div className="min-h-screen bg-[#0D1117] flex items-center justify-center p-4 selection:bg-[#B8860B]/30">
-      <div className="w-full max-w-4xl grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+    <div className="bg-[#F3F4F6] dark:bg-[#0A0A0C] text-gray-800 dark:text-gray-100 font-sans min-h-screen flex flex-col relative overflow-hidden transition-colors duration-300">
+      <div className="absolute inset-0 z-0 pointer-events-none">
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,#1f2937_1px,transparent_1px),linear-gradient(to_bottom,#1f2937_1px,transparent_1px)] bg-[size:40px_40px] opacity-5 [mask-image:linear-gradient(to_bottom,transparent,10%,white,90%,transparent)]"></div>
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-[#D99000]/5 dark:bg-[#D99000]/10 rounded-full blur-3xl"></div>
+      </div>
 
-        {/* Lado Esquerdo: Branding e Infos */}
-        <div className="hidden md:flex flex-col space-y-8 pr-8">
-          <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-2xl bg-[#B8860B] flex items-center justify-center shadow-2xl shadow-[#B8860B]/20">
-              <TrendingUp size={32} className="text-white" />
-            </div>
-            <div>
-              <h1 className="text-4xl font-black text-white tracking-tight">Central</h1>
-              <span className="text-xl font-bold text-[#B8860B] tracking-[0.3em] uppercase">Remoção</span>
-            </div>
-          </div>
-          <div className="space-y-6">
-            <div className="flex gap-4">
-              <div className="w-10 h-10 rounded-xl bg-[#161B22] border border-[#30363D] flex items-center justify-center shrink-0">
-                <ShieldCheck size={20} className="text-[#B8860B]" />
+      <main className="flex-grow flex items-center justify-center p-6 relative z-10 w-full max-w-7xl mx-auto">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 w-full items-center">
+          <div className="lg:col-span-7 flex flex-col space-y-12 lg:pr-12 animate-fade-in-up">
+            <div className="flex items-center gap-4">
+              <div className="w-16 h-16 bg-[#D99000] rounded-2xl flex items-center justify-center shadow-lg shadow-[#D99000]/20">
+                <TrendingUp className="text-white text-4xl" size={32} />
               </div>
-              <div>
-                <h4 className="font-bold text-white">Segurança de Dados</h4>
-                <p className="text-sm text-[#8B949E]">Seus dados e processos protegidos por criptografia de ponta.</p>
+              <div className="flex flex-col">
+                <h1 className="font-['Outfit'] font-extrabold text-4xl tracking-tight text-gray-900 dark:text-white leading-none">
+                  Central
+                </h1>
+                <span className="font-['Outfit'] font-bold text-[#D99000] tracking-[0.3em] text-sm uppercase mt-1">
+                  Remoção
+                </span>
               </div>
             </div>
-            <div className="flex gap-4">
-              <div className="w-10 h-10 rounded-xl bg-[#161B22] border border-[#30363D] flex items-center justify-center shrink-0">
-                <Clock size={20} className="text-[#B8860B]" />
+
+            <div className="space-y-8 pl-2">
+              <div className="flex gap-5 group">
+                <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 flex items-center justify-center group-hover:border-[#D99000]/50 transition-colors">
+                  <ShieldCheck className="text-[#D99000] text-2xl" size={24} />
+                </div>
+                <div>
+                  <h3 className="font-['Outfit'] font-bold text-lg text-gray-900 dark:text-white mb-1">
+                    Segurança de Dados
+                  </h3>
+                  <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed max-w-md">
+                    Criptografia de ponta a ponta para proteger todas as informações sensíveis.
+                  </p>
+                </div>
               </div>
-              <div>
-                <h4 className="font-bold text-white">Atualização Diária</h4>
-                <p className="text-sm text-[#8B949E]">Acompanhamento em tempo real da baixa nos órgãos.</p>
+
+              <div className="flex gap-5 group">
+                <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 flex items-center justify-center group-hover:border-[#D99000]/50 transition-colors">
+                  <Clock className="text-[#D99000] text-2xl" size={24} />
+                </div>
+                <div>
+                  <h3 className="font-['Outfit'] font-bold text-lg text-gray-900 dark:text-white mb-1">
+                    Atualização Diária
+                  </h3>
+                  <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed max-w-md">
+                    Monitoramento em tempo real da baixa nos órgãos de proteção ao crédito.
+                  </p>
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Botões de Atalho para Teste */}
-          <div className="pt-8 border-t border-[#30363D] space-y-4">
-            <p className="text-[10px] font-black text-[#484F58] uppercase tracking-[0.2em]">Modo Teste Rápido</p>
-            <div className="flex gap-3">
-              <button onClick={loginAsAdmin} className="flex-1 bg-white/5 border border-white/10 hover:border-[#B8860B]/50 hover:bg-[#B8860B]/10 py-3 rounded-xl text-[10px] font-black uppercase transition-all">
-                Acesso Admin
-              </button>
-              <button onClick={loginAsReseller} className="flex-1 bg-white/5 border border-white/10 hover:border-[#B8860B]/50 hover:bg-[#B8860B]/10 py-3 rounded-xl text-[10px] font-black uppercase transition-all">
-                Acesso Revendedor
-              </button>
-            </div>
-          </div>
-        </div>
+          <div className="lg:col-span-5 w-full">
+            <div className="bg-white dark:bg-[#16181C] rounded-3xl p-8 md:p-12 shadow-2xl border border-gray-100 dark:border-gray-800 relative overflow-hidden">
+              <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-[#D99000] to-transparent opacity-50"></div>
 
-        {/* Lado Direito: Formulários */}
-        <div className="bg-[#161B22] border border-[#30363D] rounded-[2.5rem] p-8 md:p-10 shadow-2xl space-y-8 animate-in slide-in-from-right-8 duration-500">
+              <div className="text-center mb-10">
+                <h2 className="font-['Outfit'] font-bold text-3xl text-gray-900 dark:text-white mb-2">
+                  {authType === 'client' ? 'Portal de Acompanhamento' : authType === 'login' ? 'Acesso ao Painel' : 'Criar Conta'}
+                </h2>
+                <p className="text-gray-500 dark:text-gray-400 text-sm">
+                  {authType === 'client' ? 'Consulte o status do seu CPF/CNPJ' : 'Entre com suas credenciais de parceiro'}
+                </p>
+              </div>
 
-          <div className="flex flex-col items-center md:hidden mb-6">
-            <TrendingUp size={48} className="text-[#B8860B] mb-2" />
-            <h2 className="text-2xl font-black">Central Remoção</h2>
-          </div>
-
-          <div className="flex p-1.5 bg-[#0D1117] border border-[#30363D] rounded-2xl">
-            <button
-              onClick={() => setAuthType('login')}
-              className={`flex-1 py-3 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all ${authType !== 'client' ? 'bg-[#B8860B] text-white shadow-lg shadow-[#B8860B]/20' : 'text-[#8B949E]'}`}
-            >
-              Parceiro
-            </button>
-            <button
-              onClick={() => setAuthType('client')}
-              className={`flex-1 py-3 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all ${authType === 'client' ? 'bg-[#B8860B] text-white shadow-lg shadow-[#B8860B]/20' : 'text-[#8B949E]'}`}
-            >
-              Cliente
-            </button>
-          </div>
-
-          <div className="space-y-6">
-            <div className="text-center">
-              <h3 className="text-2xl font-black text-white">
-                {authType === 'client' ? 'Portal de Acompanhamento' : authType === 'login' ? 'Acesso ao Painel' : 'Novo Cadastro'}
-              </h3>
-              <p className="text-sm text-[#8B949E] mt-1">
-                {authType === 'client' ? 'Consulte o status do seu CPF/CNPJ' : 'Entre com suas credenciais de parceiro'}
-              </p>
-            </div>
-
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {authType === 'client' ? (
-                <div className="space-y-4">
+              <form onSubmit={handleSubmit} className="space-y-6">
+                {authType === 'client' ? (
                   <div className="relative group">
-                    <Shield className="absolute left-5 top-1/2 -translate-y-1/2 text-[#484F58] group-focus-within:text-[#B8860B] transition-colors" size={20} />
+                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                      <ShieldCheck className="text-gray-400 group-focus-within:text-[#D99000] transition-colors" size={20} />
+                    </div>
                     <input
                       required
                       type="text"
-                      placeholder="CPF ou CNPJ (apenas números)"
-                      className="w-full bg-[#0D1117] border border-[#30363D] rounded-2xl pl-14 pr-6 py-5 text-sm font-bold focus:border-[#B8860B] outline-none transition-all placeholder:text-[#484F58]"
+                      className="w-full bg-[#Eef2f6] text-gray-900 placeholder-gray-500 rounded-xl py-4 pl-12 pr-4 border-none focus:ring-2 focus:ring-[#D99000]/50 focus:bg-white transition-all font-medium tracking-wide"
+                      placeholder="CPF ou CNPJ"
                       value={formData.document}
                       onChange={e => setFormData({ ...formData, document: e.target.value })}
                     />
                   </div>
-                  <div className="p-4 bg-[#B8860B]/5 border border-[#B8860B]/20 rounded-2xl text-center">
-                    <p className="text-[10px] text-[#B8860B] font-black uppercase leading-relaxed">
-                      Acesso seguro e direto. Não pedimos senha para clientes finais.
-                    </p>
-                  </div>
-                </div>
-              ) : (
-                <>
-                  {authType === 'register' && (
+                ) : (
+                  <>
+                    {authType === 'register' && (
+                      <div className="relative group">
+                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                          <UserIcon className="text-gray-400 group-focus-within:text-[#D99000] transition-colors" size={20} />
+                        </div>
+                        <input
+                          required
+                          type="text"
+                          className="w-full bg-[#Eef2f6] text-gray-900 placeholder-gray-500 rounded-xl py-4 pl-12 pr-4 border-none focus:ring-2 focus:ring-[#D99000]/50 focus:bg-white transition-all font-medium"
+                          placeholder="Nome Completo"
+                          value={formData.name}
+                          onChange={e => setFormData({ ...formData, name: e.target.value })}
+                        />
+                      </div>
+                    )}
                     <div className="relative group">
-                      <UserIcon className="absolute left-5 top-1/2 -translate-y-1/2 text-[#484F58] group-focus-within:text-[#B8860B]" size={20} />
+                      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                        <Mail className="text-gray-400 group-focus-within:text-[#D99000] transition-colors" size={20} />
+                      </div>
                       <input
                         required
-                        type="text"
-                        placeholder="Nome Completo"
-                        className="w-full bg-[#0D1117] border border-[#30363D] rounded-2xl pl-14 pr-6 py-4 text-sm focus:border-[#B8860B] outline-none transition-all"
-                        value={formData.name}
-                        onChange={e => setFormData({ ...formData, name: e.target.value })}
+                        type="email"
+                        className="w-full bg-[#Eef2f6] text-gray-900 placeholder-gray-500 rounded-xl py-4 pl-12 pr-4 border-none focus:ring-2 focus:ring-[#D99000]/50 focus:bg-white transition-all font-medium"
+                        placeholder="admin@admin.com"
+                        value={formData.email}
+                        onChange={e => setFormData({ ...formData, email: e.target.value })}
                       />
                     </div>
-                  )}
-                  <div className="relative group">
-                    <Mail className="absolute left-5 top-1/2 -translate-y-1/2 text-[#484F58] group-focus-within:text-[#B8860B]" size={20} />
-                    <input
-                      required
-                      type="email"
-                      placeholder="E-mail"
-                      className="w-full bg-[#0D1117] border border-[#30363D] rounded-2xl pl-14 pr-6 py-4 text-sm focus:border-[#B8860B] outline-none transition-all"
-                      value={formData.email}
-                      onChange={e => setFormData({ ...formData, email: e.target.value })}
-                    />
-                  </div>
-                  <div className="relative group">
-                    <Lock className="absolute left-5 top-1/2 -translate-y-1/2 text-[#484F58] group-focus-within:text-[#B8860B]" size={20} />
-                    <input
-                      required
-                      type="password"
-                      placeholder="Senha"
-                      className="w-full bg-[#0D1117] border border-[#30363D] rounded-2xl pl-14 pr-6 py-4 text-sm focus:border-[#B8860B] outline-none transition-all"
-                      value={formData.password}
-                      onChange={e => setFormData({ ...formData, password: e.target.value })}
-                    />
-                  </div>
-                  {authType === 'login' && (
-                    <div className="flex flex-col gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setAuthType('register')}
-                        className="text-[10px] text-[#8B949E] hover:text-[#B8860B] font-bold uppercase ml-1"
-                      >
-                        Não tem uma conta? Cadastre-se
-                      </button>
+                    <div className="relative group">
+                      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                        <Lock className="text-gray-400 group-focus-within:text-[#D99000] transition-colors" size={20} />
+                      </div>
+                      <input
+                        required
+                        type="password"
+                        className="w-full bg-[#Eef2f6] text-gray-900 placeholder-gray-500 rounded-xl py-4 pl-12 pr-4 border-none focus:ring-2 focus:ring-[#D99000]/50 focus:bg-white transition-all font-medium tracking-widest"
+                        placeholder="•••••••••••••"
+                        value={formData.password}
+                        onChange={e => setFormData({ ...formData, password: e.target.value })}
+                      />
                     </div>
-                  )}
-                  {authType === 'register' && (
-                    <button
-                      type="button"
-                      onClick={() => setAuthType('login')}
-                      className="text-[10px] text-[#8B949E] hover:text-[#B8860B] font-bold uppercase ml-1"
-                    >
-                      Já possui conta? Faça Login
-                    </button>
-                  )}
-                </>
-              )}
 
-              <button className="w-full bg-[#B8860B] hover:bg-[#9a7009] text-white py-5 rounded-[1.5rem] font-black text-lg shadow-xl shadow-[#B8860B]/20 transition-all flex items-center justify-center gap-3 active:scale-95 group">
-                {authType === 'client' ? 'Acompanhar Processo' : authType === 'login' ? 'Entrar no Sistema' : 'Criar minha Conta'}
-                <ChevronRight size={20} className="group-hover:translate-x-1 transition-transform" />
-              </button>
-            </form>
+                    <div className="flex justify-end pt-2">
+                      {authType === 'login' && (
+                        <button
+                          type="button"
+                          onClick={() => setAuthType('register')}
+                          className="text-[10px] sm:text-xs font-bold text-gray-400 dark:text-gray-500 hover:text-[#D99000] tracking-wider uppercase transition-colors"
+                        >
+                          Não tem conta? Cadastre-se
+                        </button>
+                      )}
+                      {authType === 'register' && (
+                        <button
+                          type="button"
+                          onClick={() => setAuthType('login')}
+                          className="text-[10px] sm:text-xs font-bold text-gray-400 dark:text-gray-500 hover:text-[#D99000] tracking-wider uppercase transition-colors"
+                        >
+                          Já tem conta? Faça Login
+                        </button>
+                      )}
+                    </div>
+                  </>
+                )}
 
-            {/* Atalhos Mobile */}
-            <div className="md:hidden pt-4 border-t border-[#30363D] grid grid-cols-2 gap-2">
-              <button onClick={loginAsAdmin} className="bg-white/5 py-2 rounded-xl text-[9px] font-black uppercase text-[#8B949E]">Admin Teste</button>
-              <button onClick={loginAsReseller} className="bg-white/5 py-2 rounded-xl text-[9px] font-black uppercase text-[#8B949E]">Revendedor Teste</button>
+                <button
+                  type="submit"
+                  className="group w-full bg-gradient-to-r from-[#D99000] to-yellow-600 hover:to-yellow-500 text-white font-['Outfit'] font-bold text-sm tracking-widest py-4 rounded-xl shadow-lg shadow-[#D99000]/25 hover:shadow-[#D99000]/40 transition-all transform hover:-translate-y-0.5 flex items-center justify-center gap-2 uppercase"
+                >
+                  {authType === 'client' ? 'Consultar' : authType === 'login' ? 'Acessar Painel' : 'Criar Conta'}
+                  <ChevronRight size={20} className="group-hover:translate-x-1 transition-transform" />
+                </button>
+              </form>
             </div>
           </div>
         </div>
-      </div>
+      </main>
     </div>
   );
 };
 
 export default AuthScreen;
+

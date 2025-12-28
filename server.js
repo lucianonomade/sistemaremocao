@@ -127,13 +127,31 @@ app.get('/api/lists', async (req, res) => {
 
   if (role === 'reseller') {
     query = query.eq('reseller_id', userId);
-  } else if (role === 'client' && doc) {
-    query = query.eq('client_document', doc);
   }
 
   const { data, error } = await query;
 
-  if (error) return res.status(400).json({ error: error.message });
+  if (error) {
+    console.error('SERVER DEBUG: Error fetching lists:', error);
+    return res.status(400).json({ error: error.message });
+  }
+
+  console.log(`SERVER DEBUG: Fetched ${data ? data.length : 0} lists. Role: ${role}, Doc: ${doc}`);
+
+  let filteredData = data;
+
+  if (role === 'client' && doc) {
+    const cleanDoc = doc.replace(/\D/g, '');
+    filteredData = data.filter(l => {
+      const dbDoc = String(l.client_document || '').replace(/\D/g, '');
+      const match = dbDoc.includes(cleanDoc) || cleanDoc.includes(dbDoc);
+      if (match) console.log(`SERVER DEBUG: Match found! CleanInput: ${cleanDoc}, DbDoc: ${dbDoc}`);
+      return match;
+    });
+    console.log(`SERVER DEBUG: Filtered down to ${filteredData.length} matches.`);
+  }
+
+  const resultData = role === 'client' ? filteredData : data;
 
   const mapping = (l) => ({
     id: l.id,
@@ -151,7 +169,7 @@ app.get('/api/lists', async (req, res) => {
     }
   });
 
-  res.json(data.map(mapping));
+  res.json(resultData.map(mapping));
 });
 
 // Criar nova lista
@@ -744,26 +762,32 @@ const ASAAS_URL = process.env.ASAAS_API_URL;
 const ASAAS_KEY = process.env.ASAAS_API_KEY;
 
 // Helper: Get or Create Customer
-async function getOrCreateAsaasCustomer(profile) {
-  if (profile.asaas_customer_id) return profile.asaas_customer_id;
+// Helper: Get or Create Customer
+async function getOrCreateAsaasCustomer(profile, overrides = {}) {
+  // Use overrides if provided, else profile
+  const p = { ...profile, ...overrides };
 
-  // Search by email/cpf
-  const searchRes = await fetch(`${ASAAS_URL}/customers?email=${profile.email}`, {
-    headers: { access_token: ASAAS_KEY }
-  });
-  const searchData = await searchRes.json();
-  if (searchData.data && searchData.data.length > 0) {
-    // Update profile
-    await supabase.from('profiles').update({ asaas_customer_id: searchData.data[0].id }).eq('id', profile.id);
-    return searchData.data[0].id;
-  }
+  if (p.asaas_customer_id) return p.asaas_customer_id;
+
+  // Search by email
+  try {
+    const searchRes = await fetch(`${ASAAS_URL}/customers?email=${p.email}`, {
+      headers: { access_token: ASAAS_KEY }
+    });
+    const searchData = await searchRes.json();
+    if (searchData.data && searchData.data.length > 0) {
+      // Try to update profile (fire & forget)
+      supabase.from('profiles').update({ asaas_customer_id: searchData.data[0].id }).eq('id', p.id).then();
+      return searchData.data[0].id;
+    }
+  } catch (e) { console.error('Asaas Search Error:', e); }
 
   // Validate Document
-  const rawDoc = profile.document || '';
+  const rawDoc = p.document || '';
   const sanitizedDoc = rawDoc.replace(/\D/g, '');
 
   if (!sanitizedDoc || (sanitizedDoc.length !== 11 && sanitizedDoc.length !== 14)) {
-    throw new Error('CPF/CNPJ inválido ou ausente. Por favor, atualize seus dados no perfil.');
+    throw new Error('CPF/CNPJ inválido (' + sanitizedDoc + '). Verifique os dados enviados.');
   }
 
   // Create
@@ -774,43 +798,51 @@ async function getOrCreateAsaasCustomer(profile) {
       access_token: ASAAS_KEY
     },
     body: JSON.stringify({
-      name: profile.name,
-      email: profile.email,
+      name: p.name,
+      email: p.email,
       cpfCnpj: sanitizedDoc,
-      externalReference: profile.id
+      externalReference: p.id,
+      mobilePhone: p.whatsapp,
+      notificationDisabled: true
     })
   });
   const customer = await createRes.json();
 
   if (customer.id) {
-    await supabase.from('profiles').update({ asaas_customer_id: customer.id }).eq('id', profile.id);
+    supabase.from('profiles').update({ asaas_customer_id: customer.id }).eq('id', p.id).then();
     return customer.id;
   }
+
+  // Handle Specific Errors
+  if (customer.errors) {
+    throw new Error('Asaas Error: ' + customer.errors[0].description);
+  }
+
   throw new Error('Falha ao criar cliente no Asaas: ' + JSON.stringify(customer));
 }
 
 app.post('/api/asaas/create-pix-charge', async (req, res) => {
   try {
-    const { userId, amount } = req.body;
+    const { userId, amount, type = 'deposit', customerData } = req.body;
 
     // 1. Get User
     const { data: profile } = await supabase.from('profiles').select('*').eq('id', userId).single();
     if (!profile) return res.status(404).json({ error: 'Usuário não encontrado' });
 
-    // 2. Create pending transaction (to get ID for externalReference)
+    // 2. Create pending transaction
     const { data: tx, error: txError } = await supabase.from('transactions').insert({
       reseller_id: userId,
-      type: 'deposit',
+      type: type === 'plan' ? 'plan_payment' : 'deposit',
       amount,
       status: 'pending',
-      description: 'Recarga via PIX (Asaas)',
+      description: type === 'plan' ? 'Renovação de Plano' : 'Recarga via PIX (Asaas)',
       date: new Date().toISOString()
     }).select().single();
 
     if (txError) throw txError;
 
-    // 3. Get Asaas Customer
-    const customerId = await getOrCreateAsaasCustomer(profile);
+    // 3. Get Asaas Customer (with Data Override)
+    const customerId = await getOrCreateAsaasCustomer(profile, customerData || {});
 
     // 4. Create Payment
     const paymentRes = await fetch(`${ASAAS_URL}/payments`, {
@@ -848,6 +880,7 @@ app.post('/api/asaas/create-pix-charge', async (req, res) => {
 
   } catch (error) {
     console.error('Asaas Error:', error);
+    fs.writeFileSync('debug_asaas.txt', `[${new Date().toISOString()}] ERROR: ${error.message}\n${error.stack}\n---\n`, { flag: 'a' });
     res.status(500).json({ error: error.message });
   }
 });
@@ -874,6 +907,53 @@ app.post('/api/asaas/webhook', async (req, res) => {
   }
 
   res.json({ received: true });
+});
+
+// CHECK PAYMENT STATUS (Manual or Polling)
+app.get('/api/asaas/check-payment/:paymentId', async (req, res) => {
+  try {
+    const { paymentId } = req.params;
+
+    // Check status at Asaas
+    const asaasRes = await fetch(`${ASAAS_URL}/payments/${paymentId}`, {
+      headers: { access_token: ASAAS_KEY }
+    });
+    const payment = await asaasRes.json();
+
+    if (payment.status === 'RECEIVED' || payment.status === 'CONFIRMED') {
+      // Activate logic similar to webhook
+      const txId = payment.externalReference;
+      if (txId) {
+        const { data: tx } = await supabase.from('transactions').select('*').eq('id', txId).single();
+
+        if (tx && tx.status !== 'completed') {
+          await supabase.from('transactions').update({ status: 'completed' }).eq('id', txId);
+
+          if (tx.type === 'plan_payment') {
+            // RENEW PLAN
+            const oneMonthLater = new Date();
+            oneMonthLater.setDate(oneMonthLater.getDate() + 30);
+
+            await supabase.from('profiles').update({
+              plan: 'Mensal',
+              status: 'active',
+              expiry_date: oneMonthLater.toISOString()
+            }).eq('id', tx.reseller_id);
+          } else {
+            // DEPOSIT
+            const { data: profile } = await supabase.from('profiles').select('balance').eq('id', tx.reseller_id).single();
+            const newBalance = (parseFloat(profile.balance) || 0) + parseFloat(tx.amount);
+            await supabase.from('profiles').update({ balance: newBalance }).eq('id', tx.reseller_id);
+          }
+        }
+      }
+      return res.json({ status: 'paid' });
+    }
+
+    res.json({ status: 'pending' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 
