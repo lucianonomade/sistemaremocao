@@ -59,7 +59,7 @@ app.post('/api/auth/login', async (req, res) => {
     // Login Manual (para facilitar testes do user sem convites de email)
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
-      .select('*')
+      .select('*, plans(*)')
       .eq('email', email)
       .eq('password', password)
       .maybeSingle();
@@ -81,7 +81,7 @@ app.post('/api/auth/login', async (req, res) => {
   // Buscar perfil detalhado para login oficial
   const { data: profile, error: profileError } = await supabase
     .from('profiles')
-    .select('*')
+    .select('*, plans(*)')
     .eq('id', authData.user.id)
     .maybeSingle();
 
@@ -335,7 +335,7 @@ app.get('/api/resellers', async (req, res) => {
     password: r.password,
     whatsapp: r.whatsapp,
     planId: r.plan_id,
-    plan: r.plans?.name || (r.role === 'admin' ? 'Admin' : 'Mensal'),
+    plan: r.plans?.name || (r.role === 'admin' ? 'Admin' : 'Teste Grátis'),
     commissionRate: r.plans?.commission_rate || (r.role === 'admin' ? 0 : 40),
     expiryDate: r.expiry_date || '2099-12-31',
     usageDays: r.usage_days || 30,

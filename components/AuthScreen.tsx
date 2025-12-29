@@ -94,7 +94,8 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin, onRegister, resellers,
           document: data.profile.document,
           whatsapp: data.profile.whatsapp,
           expiryDate: data.profile.expiry_date, // Mapeamento crucial para o banner funcionar
-          planId: data.profile.plan_id         // Mapeamento crucial para a lógica de trial
+          planId: data.profile.plan_id,         // Mapeamento crucial para a lógica de trial
+          plan: data.profile.plans?.name || 'Gratuito'
         };
         onLogin(user);
       } else {

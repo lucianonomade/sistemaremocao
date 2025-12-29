@@ -243,7 +243,6 @@ const App: React.FC = () => {
 
               <SidebarLink sectionTitle label="Financeiro" />
               <SidebarLink icon={Wallet} label="Depósitos" tabId="finance-deposits" />
-              <SidebarLink icon={History} label="Extrato Detalhado" tabId="finance" />
 
               <SidebarLink sectionTitle label="Outros" />
               <SidebarLink icon={Wrench} label="Ferramentas" tabId="tools" />
@@ -306,42 +305,10 @@ const App: React.FC = () => {
               <SidebarLink sectionTitle label="Financeiro" />
               <SidebarLink icon={Wallet} label="Depósitos" tabId="finance-deposits" />
 
-              {(() => {
-                const hasExpiry = currentUser.expiryDate && !isNaN(new Date(currentUser.expiryDate).getTime());
-                const isExpired = !hasExpiry || new Date(currentUser.expiryDate!).getTime() < new Date().getTime();
-                const isPaidPlan = !!currentUser.planId;
 
-                const shouldBlock = isExpired || !isPaidPlan;
-
-                if (shouldBlock) {
-                  return (
-                    <div className="opacity-50 pointer-events-none relative group">
-                      <SidebarLink icon={History} label="Extrato Detalhado" tabId="ignore" />
-                      <div className="absolute right-4 top-3 text-[10px] font-black uppercase text-[#B8860B] tracking-widest bg-[#161B22] px-2 py-0.5 rounded border border-[#B8860B]/30">{isExpired ? 'Vencido' : 'Premium'}</div>
-                    </div>
-                  );
-                }
-                return <SidebarLink icon={History} label="Extrato Detalhado" tabId="finance" />;
-              })()}
 
               <SidebarLink sectionTitle label="Outros" />
               {(() => {
-                // Strict Access Check:
-                // 1. Must have an expiry date
-                // 2. Must not be expired (days > 0)
-                // 3. Must have a confirmed planId (Paid) OR be explicitly Admin
-                // If just "Active" but no planId => It's a trial/free user => BLOCKED.
-
-                // Admin bypasses ALL checks
-                if (currentUser.role === 'admin') {
-                  return (
-                    <>
-                      <SidebarLink icon={Wrench} label="Ferramentas" tabId="tools" />
-                      <SidebarLink icon={ImageIcon} label="Criativos" tabId="creatives" />
-                    </>
-                  );
-                }
-
                 const hasExpiry = currentUser.expiryDate && !isNaN(new Date(currentUser.expiryDate).getTime());
                 const isExpired = !hasExpiry || new Date(currentUser.expiryDate!).getTime() < new Date().getTime();
                 const isPaidPlan = !!currentUser.planId;
@@ -374,7 +341,49 @@ const App: React.FC = () => {
           )}
         </div>
 
-        <div className="p-4 border-t border-white/5">
+        <div className="p-4 border-t border-white/5 space-y-3">
+          {currentUser.role === 'reseller' && (
+            <div className={`p-4 rounded-2xl border ${(() => {
+              if (!currentUser.expiryDate) return 'bg-red-500/10 border-red-500/20 text-red-500';
+              const expiry = new Date(currentUser.expiryDate);
+              if (isNaN(expiry.getTime())) return 'bg-red-500/10 border-red-500/20 text-red-500';
+
+              const today = new Date();
+              const diff = expiry.getTime() - today.getTime();
+              const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
+
+              if (days <= 3) return 'bg-red-500/10 border-red-500/20 text-red-500 animate-pulse';
+              return 'bg-[#D99000]/10 border-[#D99000]/20 text-[#D99000]';
+            })()}`}>
+              <div className="flex items-center gap-2 mb-2">
+                <Clock size={14} />
+                <span className="text-[10px] font-black uppercase tracking-widest">Acesso</span>
+              </div>
+              <p className="text-[11px] font-bold leading-tight">
+                {(() => {
+                  if (!currentUser.expiryDate) return 'Licença Expirada';
+                  const expiry = new Date(currentUser.expiryDate);
+                  if (isNaN(expiry.getTime())) return 'Licença Expirada';
+
+                  const today = new Date();
+                  const diff = expiry.getTime() - today.getTime();
+                  const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
+
+                  if (currentUser.status === 'trial' || (days > 0 && !currentUser.planId)) {
+                    return `Teste Grátis: ${days} ${days === 1 ? 'dia' : 'dias'}`;
+                  }
+
+                  return days <= 0 ? 'Licença Expirada' : `${days} ${days === 1 ? 'dia restante' : 'dias restantes'}`;
+                })()}
+              </p>
+              <button
+                onClick={() => setActiveTab('finance-deposits')}
+                className="mt-3 w-full py-2 bg-current/10 hover:bg-current/20 rounded-lg text-[9px] font-black uppercase tracking-tighter transition-colors flex items-center justify-center gap-1"
+              >
+                Renovar Agora
+              </button>
+            </div>
+          )}
           <div className="bg-[#1E2025] rounded-xl p-3 flex items-center gap-3 cursor-pointer hover:bg-white/5 transition-colors group">
             <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-sm">
               {currentUser.name.substring(0, 2).toUpperCase()}
@@ -394,44 +403,7 @@ const App: React.FC = () => {
       {/* Main Content */}
       <div className="flex-1 flex flex-col min-w-0 bg-[#0A0A0C] relative">
 
-        {/* Trial / Expiry Banner */}
-        {currentUser.role === 'reseller' && (
-          <div className={`w-full py-2 px-6 flex items-center justify-center gap-4 text-[10px] font-black uppercase tracking-[0.2em] z-[60] shadow-2xl ${(() => {
-            if (!currentUser.expiryDate) return 'bg-red-600 text-white animate-pulse';
-            const expiry = new Date(currentUser.expiryDate);
-            if (isNaN(expiry.getTime())) return 'bg-red-600 text-white animate-pulse';
 
-            const today = new Date();
-            const diff = expiry.getTime() - today.getTime();
-            const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
-
-            if (days > 0 && !currentUser.planId) return 'bg-[#B8860B] text-white'; // Trial Color
-
-            return days <= 3 ? 'bg-red-600 text-white animate-pulse' : 'bg-[#B8860B] text-white';
-          })()
-            }`}>
-            <span className="flex items-center gap-2">
-              <Clock size={14} />
-              {(() => {
-                if (!currentUser.expiryDate) return 'Sua licença expirou! Renove agora.';
-                const expiry = new Date(currentUser.expiryDate);
-                if (isNaN(expiry.getTime())) return 'Sua licença expirou! Renove agora.';
-
-                const today = new Date();
-                const diff = expiry.getTime() - today.getTime();
-                const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
-
-                // Se o usuário estiver em Trial ou não tiver plano ativo, mostra o countdown de teste
-                if (currentUser.status === 'trial' || (days > 0 && !currentUser.planId)) {
-                  return `TESTE GRÁTIS: ${days} ${days === 1 ? 'DIA RESTANTE' : 'DIAS RESTANTES'} DE ACESSO.`;
-                }
-
-                return days <= 0 ? 'Sua licença expirou! Renove agora para continuar usando.' :
-                  `Atenção: Você tem ${days} ${days === 1 ? 'dia restante' : 'dias restantes'} de acesso.`;
-              })()}
-            </span>
-          </div>
-        )}
 
         <header className="h-20 border-b border-white/5 bg-[#0D0D0F]/80 backdrop-blur-xl px-8 flex items-center justify-between sticky top-0 z-50">
           <div className="flex items-center gap-4">
@@ -578,7 +550,7 @@ const App: React.FC = () => {
             {activeTab === 'plans' && (
               <PlanManager onPlanUpdate={() => fetchData()} currentUser={currentUser} />
             )}
-            {(activeTab === 'finance' || activeTab === 'finance-deposits') && (
+            {activeTab === 'finance-deposits' && (
               <Finance
                 currentUser={currentUser}
                 platformSettings={platformSettings}
