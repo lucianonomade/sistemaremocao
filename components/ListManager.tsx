@@ -50,11 +50,26 @@ const ListManager: React.FC<ListManagerProps> = ({ lists, setLists, currentUser,
       const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
 
       let count = 0;
-      // Skip header, assume first column is CPF/Document, second is Name
+
+      // Determine column indices based on header (Row 0)
+      const headerRow = jsonData[0] as any[];
+      let docIndex = 0; // Default to Col 0
+      let nameIndex = 1; // Default to Col 1
+
+      if (Array.isArray(headerRow)) {
+        const lowerHeader = headerRow.map(h => h?.toString().toLowerCase() || '');
+        const foundDoc = lowerHeader.findIndex(h => h.includes('cpf') || h.includes('document') || h.includes('cnpj'));
+        const foundName = lowerHeader.findIndex(h => h.includes('nome') || h.includes('client') || h.includes('razao'));
+
+        if (foundDoc !== -1) docIndex = foundDoc;
+        if (foundName !== -1) nameIndex = foundName;
+      }
+
+      // Iterate starting from Row 1
       for (let i = 1; i < jsonData.length; i++) {
         const row: any = jsonData[i];
-        const doc = row[0]?.toString().replace(/\D/g, '');
-        const name = row[1]?.toString() || '';
+        const doc = row[docIndex]?.toString().replace(/\D/g, '');
+        const name = row[nameIndex]?.toString() || '';
 
         if (doc && (doc.length === 11 || doc.length === 14)) {
           // Create List logic repeated
