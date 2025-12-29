@@ -326,7 +326,11 @@ const App: React.FC = () => {
               {(() => {
                 const hasExpiry = currentUser.expiryDate && !isNaN(new Date(currentUser.expiryDate).getTime());
                 const isExpired = !hasExpiry || new Date(currentUser.expiryDate!).getTime() < new Date().getTime();
-                const isPaidPlan = !!currentUser.planId;
+                // Enhanced check: Plan must be present AND not be a free/test plan
+                const planName = (currentUser.plan || '').toLowerCase();
+                const isFreePlan = planName.includes('gratuito') || planName.includes('teste') || planName.includes('free') || planName.includes('trial');
+                const isPaidPlan = !!currentUser.planId && !isFreePlan;
+
                 // Require Paid Plan for these tools as well
                 const canAccess = !isExpired && currentUser.status === 'active' && isPaidPlan;
 
@@ -595,7 +599,11 @@ const App: React.FC = () => {
 
             const hasExpiry = currentUser.expiryDate && !isNaN(new Date(currentUser.expiryDate).getTime());
             const isExpired = !hasExpiry || new Date(currentUser.expiryDate!).getTime() < new Date().getTime();
-            const isPaidPlan = !!currentUser.planId;
+
+            const planName = (currentUser.plan || '').toLowerCase();
+            const isFreePlan = planName.includes('gratuito') || planName.includes('teste') || planName.includes('free') || planName.includes('trial');
+            const isPaidPlan = !!currentUser.planId && !isFreePlan;
+
             const canAccess = !isExpired && currentUser.status === 'active' && isPaidPlan;
             return canAccess ? <CreativesManager currentUser={currentUser} /> : null;
           })()}
@@ -604,7 +612,11 @@ const App: React.FC = () => {
 
             const hasExpiry = currentUser.expiryDate && !isNaN(new Date(currentUser.expiryDate).getTime());
             const isExpired = !hasExpiry || new Date(currentUser.expiryDate!).getTime() < new Date().getTime();
-            const isPaidPlan = !!currentUser.planId;
+
+            const planName = (currentUser.plan || '').toLowerCase();
+            const isFreePlan = planName.includes('gratuito') || planName.includes('teste') || planName.includes('free') || planName.includes('trial');
+            const isPaidPlan = !!currentUser.planId && !isFreePlan;
+
             const canAccess = !isExpired && currentUser.status === 'active' && isPaidPlan;
             return canAccess ? <ToolsManager currentUser={currentUser} /> : null;
           })()}
