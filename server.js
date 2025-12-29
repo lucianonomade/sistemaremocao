@@ -989,18 +989,22 @@ app.post('/api/asaas/webhook', async (req, res) => {
         // Update Transaction
         await supabase.from('transactions').update({ status: 'completed' }).eq('id', txId);
 
+
         if (tx.type === 'plan_payment') {
           // RENEW PLAN
+          const { data: planData } = await supabase.from('plans').select('id').eq('name', 'Mensal').single();
           const oneMonthLater = new Date();
           oneMonthLater.setDate(oneMonthLater.getDate() + 30);
 
-          await supabase.from('profiles').update({
-            plan: 'Mensal',
-            status: 'active',
-            expiry_date: oneMonthLater.toISOString()
-          }).eq('id', tx.reseller_id);
+          if (planData) {
+            await supabase.from('profiles').update({
+              plan_id: planData.id,
+              status: 'active',
+              expiry_date: oneMonthLater.toISOString()
+            }).eq('id', tx.reseller_id);
 
-          console.log(`[WEBHOOK] Plano renovado para usuário ${tx.reseller_id}`);
+            console.log(`[WEBHOOK] Plano renovado para usuário ${tx.reseller_id}`);
+          }
         } else {
           // DEPOSIT
           // Update Balance
@@ -1039,14 +1043,17 @@ app.get('/api/asaas/check-payment/:paymentId', async (req, res) => {
 
           if (tx.type === 'plan_payment') {
             // RENEW PLAN
+            const { data: planData } = await supabase.from('plans').select('id').eq('name', 'Mensal').single();
             const oneMonthLater = new Date();
             oneMonthLater.setDate(oneMonthLater.getDate() + 30);
 
-            await supabase.from('profiles').update({
-              plan: 'Mensal',
-              status: 'active',
-              expiry_date: oneMonthLater.toISOString()
-            }).eq('id', tx.reseller_id);
+            if (planData) {
+              await supabase.from('profiles').update({
+                plan_id: planData.id,
+                status: 'active',
+                expiry_date: oneMonthLater.toISOString()
+              }).eq('id', tx.reseller_id);
+            }
           } else {
             // DEPOSIT
             const { data: profile } = await supabase.from('profiles').select('balance').eq('id', tx.reseller_id).maybeSingle();
