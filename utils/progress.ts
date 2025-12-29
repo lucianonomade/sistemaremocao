@@ -8,13 +8,11 @@ export const calculateOrganProgress = (startDateStr: string, active: boolean, or
   const diffTime = Math.max(0, now.getTime() - startDate.getTime());
   const diffDays = diffTime / (1000 * 60 * 60 * 24);
 
-  // Aumenta ~2% ao dia, com uma pequena variação baseada no índice do órgão
-  // para que não fiquem todos exatamente iguais.
-  const dailyRate = 2 + (organIndex * 0.1);
-  const progress = Math.floor(diffDays * dailyRate);
+  // Aumenta 1% ao dia (conforme especificação)
+  const progress = Math.floor(diffDays * 1);
 
-  // Limita a 99% a menos que esteja 'active' (que retorna 100% acima)
-  return Math.min(99, Math.max(0, progress));
+  // Limita a 97% (conforme especificação) a menos que esteja 'active'
+  return Math.min(97, Math.max(0, progress));
 };
 
 export const calculateListProgress = (startDateStr: string, isManual: boolean, organs?: OrganStatus): number => {
@@ -34,7 +32,7 @@ export const calculateListProgress = (startDateStr: string, isManual: boolean, o
     }, 0);
 
     const averageProgress = Math.floor(totalProgress / totalOrgans);
-    return averageProgress >= 100 ? 99 : averageProgress;
+    return averageProgress >= 100 ? 97 : averageProgress;
   }
 
   // Fallback para quando não temos os órgãos (usado em partes genéricas)
@@ -42,8 +40,8 @@ export const calculateListProgress = (startDateStr: string, isManual: boolean, o
   const now = new Date();
   const diffTime = Math.max(0, now.getTime() - startDate.getTime());
   const diffDays = diffTime / (1000 * 60 * 60 * 24);
-  let progress = Math.floor(diffDays * 2);
-  return progress >= 100 ? 99 : Math.max(0, progress);
+  let progress = Math.floor(diffDays * 1);
+  return progress >= 100 ? 97 : Math.max(0, progress);
 };
 
 export const getTimelineData = (startDateStr: string) => {

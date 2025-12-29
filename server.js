@@ -184,6 +184,7 @@ app.get('/api/lists', async (req, res) => {
     manualConclusion: l.manual_conclusion,
     status: l.status,
     clientName: l.client_name,
+    batchId: l.batch_id,
     organs: {
       serasa: l.organs_status?.[0]?.serasa || false,
       boaVista: l.organs_status?.[0]?.boa_vista || false,
@@ -206,6 +207,7 @@ app.post('/api/lists', async (req, res) => {
       reseller_id: resellerId,
       client_document: clientDocument,
       client_name: clientName,
+      batch_id: req.body.batchId || null,
       status: 'processing',
       start_date: new Date().toISOString()
     }])
@@ -230,8 +232,9 @@ app.post('/api/lists', async (req, res) => {
     clientDocument: data.client_document,
     clientName: data.client_name,
     startDate: data.start_date,
-    manualConclusion: data.manual_conclusion,
+    manualConclusion: data.manual_conclusion, // Corrigido: l não está definido aqui
     status: data.status,
+    batchId: data.batch_id,
     organs: { serasa: false, boaVista: false, spc: false, cenprotNacional: false, cenprotSP: false }
   });
 });
@@ -638,11 +641,73 @@ app.patch('/api/transactions/:id/confirm', async (req, res) => {
   res.json({ success: true });
 });
 
-// --- ROTA DE CONCLUSÃO DE LISTA ---
+// --- ROTA DE CONCLUSÃO EM LOTE ---
+
+app.patch('/api/lists/batch/organs', async (req, res) => {
+  const { ids, organ, active } = req.body;
+  console.log('PATCH Batch Organs:', { ids, organ, active });
+
+  if (!ids || !Array.isArray(ids) || ids.length === 0) {
+    return res.status(400).json({ error: 'Nenhum ID fornecido' });
+  }
+
+  const organFieldMap = {
+    serasa: 'serasa',
+    boaVista: 'boa_vista',
+    spc: 'spc',
+    cenprotNacional: 'cenprot_nacional',
+    cenprotSP: 'cenprot_sp'
+  };
+
+  const dbField = organFieldMap[organ];
+  if (!dbField) return res.status(400).json({ error: 'Órgão inválido' });
+
+  const { error } = await supabase
+    .from('organs_status')
+    .update({ [dbField]: active })
+    .in('list_id', ids);
+
+  if (error) {
+    console.error('Error in batch update:', error);
+    return res.status(400).json({ error: error.message });
+  }
+  res.json({ success: true });
+});
+
+app.post('/api/lists/batch/complete', async (req, res) => {
+  const { ids } = req.body;
+  console.log('POST Batch Complete:', { ids });
+
+  if (!ids || !Array.isArray(ids) || ids.length === 0) {
+    return res.status(400).json({ error: 'Nenhum ID fornecido' });
+  }
+
+  const { error: listError } = await supabase
+    .from('credit_lists')
+    .update({ manual_conclusion: true, status: 'completed' })
+    .in('id', ids);
+
+  if (listError) return res.status(400).json({ error: listError.message });
+
+  const { error: organError } = await supabase
+    .from('organs_status')
+    .update({
+      serasa: true, boa_vista: true, spc: true,
+      cenprot_nacional: true, cenprot_sp: true
+    })
+    .in('list_id', ids);
+
+  if (organError) return res.status(400).json({ error: organError.message });
+
+  res.json({ success: true });
+});
+
+// --- ROTA DE CONCLUSÃO INDIVIDUAL ---
 
 app.patch('/api/lists/:id/organs', async (req, res) => {
   const { id } = req.params;
   const { organ, active } = req.body;
+  console.log('PATCH Individual Organ:', { id, organ, active });
 
   // Mapeamento de camelCase para snake_case
   const organFieldMap = {

@@ -61,6 +61,7 @@ export interface CreditList {
   manualConclusion: boolean;
   organs: OrganStatus;
   status: 'processing' | 'completed';
+  batchId?: string;
 }
 
 export interface Transaction {
