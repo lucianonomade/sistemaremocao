@@ -102,7 +102,11 @@ const Finance: React.FC<FinanceProps> = ({
       const res = await fetch('/api/asaas/create-pix-charge', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: currentUser.id, amount: parseFloat(depositValue) })
+        body: JSON.stringify({
+          userId: currentUser.id,
+          amount: parseFloat(depositValue),
+          type: selectedPlanId ? 'plan' : 'deposit'
+        })
       });
       const data = await res.json();
       if (data.success) {
@@ -771,10 +775,11 @@ const Finance: React.FC<FinanceProps> = ({
             </tr>
           </thead>
           <tbody className="divide-y divide-[#30363D]">
+
             {transactions.map((tx) => (
               <tr key={tx.id} className="hover:bg-white/[0.02]">
                 <td className="px-8 py-6">
-                  <p className="text-xs font-bold text-white">{tx.date}</p>
+                  <p className="text-xs font-bold text-white">{new Date(tx.date).toLocaleDateString()} {new Date(tx.date).toLocaleTimeString()}</p>
                   <p className="text-[10px] text-[#484F58] font-bold">#{tx.id}</p>
                 </td>
                 <td className="px-8 py-6">
@@ -782,6 +787,35 @@ const Finance: React.FC<FinanceProps> = ({
                 </td>
                 <td className={`px-8 py-6 text-right font-black text-sm ${tx.type === 'deposit' ? 'text-green-500' : 'text-white'}`}>
                   {tx.type === 'deposit' ? '+' : '-'} R$ {tx.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+
+                  {/* Manual Verification Button */}
+                  {tx.status === 'pending' && (tx as any).asaas_id && (
+                    <button
+                      onClick={async () => {
+                        const btn = document.getElementById(`btn-verify-${tx.id}`);
+                        if (btn) btn.innerText = 'Verificando...';
+                        try {
+                          const res = await fetch(`/api/asaas/check-payment/${(tx as any).asaas_id}`);
+                          const data = await res.json();
+                          if (data.status === 'paid') {
+                            alert('✅ Pagamento confirmado com sucesso!');
+                            window.location.reload();
+                          } else {
+                            alert('⚠️ Pagamento ainda pendente no banco.');
+                          }
+                        } catch (e) {
+                          alert('Erro ao verificar.');
+                        } finally {
+                          if (btn) btn.innerText = 'Verificar';
+                        }
+                      }}
+                      id={`btn-verify-${tx.id}`}
+                      className="ml-4 bg-[#B8860B]/20 hover:bg-[#B8860B] text-[#B8860B] hover:text-white px-3 py-1 rounded-lg text-[10px] uppercase transition-all"
+                    >
+                      Verificar
+                    </button>
+                  )}
+                  {tx.status === 'pending' && !(tx as any).asaas_id && <span className="ml-4 text-[10px] text-red-500 uppercase">Erro ID</span>}
                 </td>
               </tr>
             ))}

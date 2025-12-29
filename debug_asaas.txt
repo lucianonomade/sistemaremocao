@@ -1,0 +1,5 @@
+[2025-12-29T01:27:35.455Z] ERROR: Erro Asaas: {"errors":[{"code":"invalid_object","description":"O valor da cobrança (R$ 1,00) menos o valor do desconto (R$ 0,00) não pode ser menor que R$ 5,00."}]}
+Error: Erro Asaas: {"errors":[{"code":"invalid_object","description":"O valor da cobrança (R$ 1,00) menos o valor do desconto (R$ 0,00) não pode ser menor que R$ 5,00."}]}
+    at C:\Users\wino\Downloads\central-remoção-saas (16)\sistemaremocao\server.js:953:28
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+---

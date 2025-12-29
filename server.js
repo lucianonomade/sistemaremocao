@@ -952,6 +952,9 @@ app.post('/api/asaas/create-pix-charge', async (req, res) => {
     const payment = await paymentRes.json();
     if (!payment.id) throw new Error('Erro Asaas: ' + JSON.stringify(payment));
 
+    // Save Asaas ID to Transaction
+    await supabase.from('transactions').update({ asaas_id: payment.id }).eq('id', tx.id);
+
     // 5. Get QR Code
     const qrRes = await fetch(`${ASAAS_URL}/payments/${payment.id}/pixQrCode`, {
       headers: { access_token: ASAAS_KEY }
@@ -986,10 +989,27 @@ app.post('/api/asaas/webhook', async (req, res) => {
         // Update Transaction
         await supabase.from('transactions').update({ status: 'completed' }).eq('id', txId);
 
-        // Update Balance
-        const { data: profile } = await supabase.from('profiles').select('balance').eq('id', tx.reseller_id).maybeSingle();
-        const newBalance = (parseFloat(profile.balance) || 0) + parseFloat(tx.amount);
-        await supabase.from('profiles').update({ balance: newBalance }).eq('id', tx.reseller_id);
+        if (tx.type === 'plan_payment') {
+          // RENEW PLAN
+          const oneMonthLater = new Date();
+          oneMonthLater.setDate(oneMonthLater.getDate() + 30);
+
+          await supabase.from('profiles').update({
+            plan: 'Mensal',
+            status: 'active',
+            expiry_date: oneMonthLater.toISOString()
+          }).eq('id', tx.reseller_id);
+
+          console.log(`[WEBHOOK] Plano renovado para usuário ${tx.reseller_id}`);
+        } else {
+          // DEPOSIT
+          // Update Balance
+          const { data: profile } = await supabase.from('profiles').select('balance').eq('id', tx.reseller_id).maybeSingle();
+          const newBalance = (parseFloat(profile.balance) || 0) + parseFloat(tx.amount);
+          await supabase.from('profiles').update({ balance: newBalance }).eq('id', tx.reseller_id);
+
+          console.log(`[WEBHOOK] Depósito confirmado para usuário ${tx.reseller_id}`);
+        }
       }
     }
   }
