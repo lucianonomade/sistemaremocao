@@ -462,6 +462,13 @@ app.patch('/api/resellers/:id', async (req, res) => {
   });
 });
 
+app.delete('/api/resellers/:id', async (req, res) => {
+  const { id } = req.params;
+  const { error } = await supabase.from('profiles').delete().eq('id', id);
+  if (error) return res.status(400).json({ error: error.message });
+  res.json({ message: 'Revendedor excluído com sucesso' });
+});
+
 // --- ROTAS DE SERVIÇOS ---
 
 app.get('/api/services', async (req, res) => {

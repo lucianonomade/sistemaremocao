@@ -88,6 +88,23 @@ const ResellerManager: React.FC<ResellerManagerProps> = ({ resellers, setReselle
     }
   };
 
+  const handleDelete = async (id: string, name: string) => {
+    if (!confirm(`Tem certeza que deseja EXCLUIR permanentemente o parceiro ${name}? Esta ação não pode ser desfeita e removerá todos os dados vinculados.`)) return;
+
+    try {
+      const response = await fetch(`/api/resellers/${id}`, {
+        method: 'DELETE'
+      });
+
+      if (!response.ok) throw new Error('Erro ao excluir revendedor');
+
+      setResellers(prev => prev.filter(r => r.id !== id));
+      alert('Parceiro removido com sucesso!');
+    } catch (err: any) {
+      alert(err.message);
+    }
+  };
+
   return (
     <div className="space-y-6 animate-in">
       <div className="flex flex-col sm:flex-row gap-4 items-center justify-between bg-[#161B22] p-6 rounded-[2rem] border border-[#30363D]">
@@ -134,9 +151,14 @@ const ResellerManager: React.FC<ResellerManagerProps> = ({ resellers, setReselle
                     </div>
                   </td>
                   <td className="px-8 py-5 text-center">
-                    <button onClick={() => handleOpenEdit(r)} className="p-3 bg-[#0D1117] border border-[#30363D] text-[#8B949E] hover:text-[#B8860B] rounded-xl transition-all">
-                      <Edit size={18} />
-                    </button>
+                    <div className="flex items-center justify-center gap-2">
+                      <button onClick={() => handleOpenEdit(r)} className="p-3 bg-[#0D1117] border border-[#30363D] text-[#8B949E] hover:text-[#B8860B] rounded-xl transition-all" title="Editar">
+                        <Edit size={18} />
+                      </button>
+                      <button onClick={() => handleDelete(r.id, r.name)} className="p-3 bg-[#0D1117] border border-[#30363D] text-[#8B949E] hover:text-red-500 rounded-xl transition-all" title="Excluir">
+                        <Trash2 size={18} />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
