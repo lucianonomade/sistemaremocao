@@ -97,6 +97,46 @@ app.post('/api/auth/login', async (req, res) => {
   res.json({ user: authData.user, profile });
 });
 
+app.post('/api/auth/client-login', async (req, res) => {
+  const document = req.body.document || req.body.cpf;
+  if (!document) return res.status(400).json({ error: 'Documento não informado' });
+
+  const cleanDoc = document.replace(/\D/g, '');
+  console.log('Tentativa de login de cliente:', cleanDoc);
+
+  // Busca se existe algum protocolo vinculado a este documento
+  const { data: lists, error } = await supabase
+    .from('credit_lists')
+    .select('*')
+    .eq('client_document', cleanDoc)
+    .limit(1);
+
+  if (error || !lists || lists.length === 0) {
+    if (cleanDoc === '12345678900') {
+      // Mock para homologação
+      return res.json({
+        id: `cli-${cleanDoc}`,
+        name: 'Cliente Homologação',
+        document: cleanDoc,
+        role: 'client',
+        status: 'active',
+        resellerId: '1'
+      });
+    }
+    return res.status(404).json({ error: 'Nenhum protocolo encontrado para este documento.' });
+  }
+
+  const list = lists[0];
+  res.json({
+    id: `cli-${cleanDoc}`,
+    name: 'Seu Processo Ativo',
+    document: cleanDoc,
+    role: 'client',
+    status: 'active',
+    resellerId: list.reseller_id
+  });
+});
+
 app.post('/api/auth/register', async (req, res) => {
   const { email, password, name, document, parentId } = req.body;
   console.log('Tentativa de registro:', email, 'Referência:', parentId);
@@ -176,25 +216,34 @@ app.get('/api/lists', async (req, res) => {
 
   const resultData = role === 'client' ? filteredData : data;
 
-  const mapping = (l) => ({
-    id: l.id,
-    resellerId: l.reseller_id,
-    clientDocument: l.client_document,
-    startDate: l.start_date,
-    manualConclusion: l.manual_conclusion,
-    status: l.status,
-    clientName: l.client_name,
-    batchId: l.batch_id,
-    organs: {
-      serasa: l.organs_status?.[0]?.serasa || false,
-      boaVista: l.organs_status?.[0]?.boa_vista || false,
-      spc: l.organs_status?.[0]?.spc || false,
-      cenprotNacional: l.organs_status?.[0]?.cenprot_nacional || false,
-      cenprotSP: l.organs_status?.[0]?.cenprot_sp || false,
-    }
-  });
+  const mapping = (l) => {
+    const organsRecord = Array.isArray(l.organs_status) ? l.organs_status[0] : l.organs_status;
+    return {
+      id: l.id,
+      resellerId: l.reseller_id,
+      clientDocument: l.client_document,
+      startDate: l.start_date || new Date().toISOString(),
+      manualConclusion: !!l.manual_conclusion,
+      status: l.status || 'processing',
+      clientName: l.client_name || 'Cliente',
+      batchId: l.batch_id,
+      organs: {
+        serasa: !!organsRecord?.serasa,
+        boaVista: !!organsRecord?.boa_vista,
+        spc: !!organsRecord?.spc,
+        cenprotNacional: !!organsRecord?.cenprot_nacional,
+        cenprotSP: !!organsRecord?.cenprot_sp,
+      }
+    };
+  };
 
-  res.json(resultData.map(mapping));
+  const mappedData = resultData.map(mapping);
+
+  if (role === 'client') {
+    console.log('SERVER DEBUG: Sending client data:', JSON.stringify(mappedData, null, 2));
+  }
+
+  res.json(mappedData);
 });
 
 // Criar nova lista
@@ -237,6 +286,13 @@ app.post('/api/lists', async (req, res) => {
     batchId: data.batch_id,
     organs: { serasa: false, boaVista: false, spc: false, cenprotNacional: false, cenprotSP: false }
   });
+});
+
+app.delete('/api/lists/:id', async (req, res) => {
+  const { id } = req.params;
+  const { error } = await supabase.from('credit_lists').delete().eq('id', id);
+  if (error) return res.status(400).json({ error: error.message });
+  res.json({ message: 'Lista removida com sucesso' });
 });
 
 // --- ROTAS DE CONFIGURAÇÕES ---
@@ -1285,6 +1341,8 @@ app.get('*', (req, res) => {
   }
   res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
+
+module.exports = app;
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {

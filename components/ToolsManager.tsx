@@ -45,7 +45,7 @@ const ToolsManager: React.FC<ToolsManagerProps> = ({ currentUser }) => {
         try {
             const res = await fetch('/api/tools');
             const data = await res.json();
-            setTools(data);
+            setTools(Array.isArray(data) ? data : []);
         } catch (error) {
             console.error('Error fetching tools:', error);
         } finally {

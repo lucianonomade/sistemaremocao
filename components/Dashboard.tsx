@@ -141,7 +141,7 @@ const Dashboard: React.FC<DashboardProps> = ({
   };
 
   return (
-    <div className="space-y-8 animate-in pb-10">
+    <div className="space-y-6 animate-in text-white">
 
       {!isAdmin && daysRemaining !== null && (
         <div className={`p-6 rounded-[2rem] border flex flex-col md:flex-row items-center justify-between gap-4 transition-all duration-500 ${daysRemaining <= 5 ? 'bg-red-500/10 border-red-500/30' : 'bg-[#161B22] border-[#30363D]'}`}>

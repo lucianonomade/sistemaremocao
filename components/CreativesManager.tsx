@@ -53,8 +53,8 @@ const CreativesManager: React.FC<CreativesManagerProps> = ({ currentUser }) => {
 
   const categories = ['Todos', 'Banners Instagram', 'Tabela de Preços', 'Vídeos Treinamento', 'Geral'];
 
-  const filteredMaterials = materials.filter(m => {
-    const matchesSearch = m.name.toLowerCase().includes(searchTerm.toLowerCase());
+  const filteredMaterials = (Array.isArray(materials) ? materials : []).filter(m => {
+    const matchesSearch = m.name?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = selectedCategory === 'Todos' || m.category === selectedCategory;
     return matchesSearch && matchesCategory;
   });
@@ -206,15 +206,43 @@ const CreativesManager: React.FC<CreativesManagerProps> = ({ currentUser }) => {
         {filteredMaterials.map((material) => (
           <div key={material.id} className="bg-[#161B22] border border-[#30363D] rounded-[2rem] overflow-hidden group hover:border-[#B8860B]/30 transition-all flex flex-col shadow-xl">
             {/* Thumbnail Area */}
-            <div className="aspect-video bg-[#0D1117] relative flex items-center justify-center overflow-hidden">
-              {material.thumbnail ? (
-                <img src={material.thumbnail} alt={material.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+            {/* Thumbnail Area */}
+            <div className="aspect-video bg-[#0D1117] relative flex items-center justify-center overflow-hidden group-hover:bg-[#161B22] transition-colors">
+              {material.type === 'video' ? (
+                <video
+                  src={material.url}
+                  className="w-full h-full object-cover"
+                  controls={false}
+                  muted
+                  loop
+                  onMouseEnter={(e) => e.currentTarget.play()}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.pause();
+                    e.currentTarget.currentTime = 0;
+                  }}
+                />
+              ) : material.thumbnail ? (
+                <>
+                  <img
+                    src={material.thumbnail}
+                    alt={material.name}
+                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none';
+                      const fallback = e.currentTarget.parentElement?.querySelector('.fallback-icon') as HTMLElement;
+                      if (fallback) fallback.classList.remove('hidden');
+                    }}
+                  />
+                  <div className="fallback-icon hidden text-[#30363D] group-hover:text-[#B8860B] transition-colors absolute inset-0 flex items-center justify-center">
+                    {getIcon(material.type)}
+                  </div>
+                </>
               ) : (
                 <div className="text-[#30363D] group-hover:text-[#B8860B] transition-colors">
                   {getIcon(material.type)}
                 </div>
               )}
-              <div className="absolute top-4 left-4">
+              <div className="absolute top-4 left-4 z-10">
                 <span className="px-3 py-1 bg-black/60 backdrop-blur-md rounded-full text-[10px] font-bold uppercase tracking-wider text-[#B8860B] border border-[#B8860B]/20">
                   {material.type}
                 </span>

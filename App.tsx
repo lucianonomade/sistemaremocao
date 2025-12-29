@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   LayoutDashboard,
   Users,
@@ -38,9 +38,20 @@ import { DashboardHome } from './components/DashboardHome';
 
 const App: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const [activeTab, setActiveTab] = useState('lists');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isAutoLoggingIn, setIsAutoLoggingIn] = useState(false);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  // Scroll to top on tab change
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (scrollContainerRef.current) {
+        scrollContainerRef.current.scrollTo({ top: 0, behavior: 'auto' });
+      }
+    }, 50);
+    return () => clearTimeout(timer);
+  }, [activeTab]);
 
   // Data State
   const [resellers, setResellers] = useState<Reseller[]>([]);
@@ -79,7 +90,8 @@ const App: React.FC = () => {
 
           if (!res.ok) throw new Error('Falha no login automático');
 
-          const user = await res.json();
+          const data = await res.json();
+          const user = data.user || data;
           setCurrentUser(user);
         } catch (error) {
           console.error('Auto login failed', error);
@@ -95,7 +107,9 @@ const App: React.FC = () => {
   // Data Fetching
   const fetchData = async () => {
     try {
-      const queryParams = currentUser ? `?userId=${currentUser.id}&role=${currentUser.role}` : '';
+      const queryParams = currentUser
+        ? `?userId=${currentUser.id}&role=${currentUser.role}${currentUser.role === 'client' ? `&doc=${currentUser.document}` : ''}`
+        : '';
       const [resellersRes, listsRes, servicesRes, transactionsRes, plansRes] = await Promise.all([
         fetch('/api/resellers'),
         fetch(`/api/lists${queryParams}`),
@@ -106,6 +120,7 @@ const App: React.FC = () => {
 
       const listsData = await listsRes.json();
       setLists(listsData);
+      console.log(`Data fetch complete: ${listsData.length} protocols found.`);
 
       if (resellersRes.ok) setResellers(await resellersRes.json());
       if (servicesRes.ok) setServices(await servicesRes.json());
@@ -204,7 +219,7 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="bg-[#0A0A0C] text-gray-100 font-sans h-screen flex overflow-hidden selection:bg-[#D99000]/30">
+    <div className="bg-[#0A0A0C] text-gray-100 font-sans h-[100dvh] flex overflow-hidden selection:bg-[#D99000]/30">
 
       {/* Mobile Overlay */}
       {sidebarOpen && (
@@ -312,7 +327,7 @@ const App: React.FC = () => {
                 const hasExpiry = currentUser.expiryDate && !isNaN(new Date(currentUser.expiryDate).getTime());
                 const isExpired = !hasExpiry || new Date(currentUser.expiryDate!).getTime() < new Date().getTime();
                 const isPaidPlan = !!currentUser.planId;
-                const canAccess = !isExpired && isPaidPlan && currentUser.status === 'active';
+                const canAccess = !isExpired && currentUser.status === 'active';
 
                 if (canAccess) {
                   return (
@@ -327,11 +342,11 @@ const App: React.FC = () => {
                   <>
                     <div className="opacity-50 pointer-events-none relative group">
                       <SidebarLink icon={Wrench} label="Ferramentas (Premium)" tabId="ignore" />
-                      <div className="absolute right-4 top-3 text-[10px] font-black uppercase text-[#B8860B] tracking-widest bg-[#161B22] px-2 py-0.5 rounded border border-[#B8860B]/30">Bloqueado</div>
+                      <div className="absolute right-4 top-3 text-[10px] font-black uppercase text-[#B8860B] tracking-widest bg-[#161B22] px-2 py-0.5 rounded border border-[#B8860B]/30">Vencido</div>
                     </div>
                     <div className="opacity-50 pointer-events-none relative group">
                       <SidebarLink icon={ImageIcon} label="Criativos (Premium)" tabId="ignore" />
-                      <div className="absolute right-4 top-3 text-[10px] font-black uppercase text-[#B8860B] tracking-widest bg-[#161B22] px-2 py-0.5 rounded border border-[#B8860B]/30">Bloqueado</div>
+                      <div className="absolute right-4 top-3 text-[10px] font-black uppercase text-[#B8860B] tracking-widest bg-[#161B22] px-2 py-0.5 rounded border border-[#B8860B]/30">Vencido</div>
                     </div>
                   </>
                 );
@@ -386,11 +401,13 @@ const App: React.FC = () => {
           )}
           <div className="bg-[#1E2025] rounded-xl p-3 flex items-center gap-3 cursor-pointer hover:bg-white/5 transition-colors group">
             <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-sm">
-              {currentUser.name.substring(0, 2).toUpperCase()}
+              {currentUser.name?.substring(0, 2).toUpperCase() || '??'}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-white truncate">{currentUser.name}</p>
-              <p className="text-xs text-gray-500 truncate capitalize">{currentUser.role === 'admin' ? 'Administrador' : 'Revendedor'}</p>
+              <p className="text-sm font-semibold text-white truncate">{currentUser.name || 'Usuário'}</p>
+              <p className="text-xs text-gray-500 truncate capitalize">
+                {currentUser.role === 'admin' ? 'Administrador' : currentUser.role === 'reseller' ? 'Revendedor' : 'Cliente'}
+              </p>
             </div>
           </div>
           <button onClick={handleLogout} className="w-full mt-3 flex items-center gap-2 px-3 py-2 text-red-400 hover:text-red-300 hover:bg-red-400/10 rounded-lg text-xs font-bold uppercase tracking-wider transition-colors">
@@ -401,7 +418,7 @@ const App: React.FC = () => {
       </aside>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col min-w-0 bg-[#0A0A0C] relative">
+      <div className="flex-1 flex flex-col min-w-0 bg-[#0D1117] relative">
 
 
 
@@ -439,7 +456,10 @@ const App: React.FC = () => {
           </div>
         </header>
 
-        <div className="flex-1 overflow-y-auto relative scrollbar-none">
+        <div
+          ref={scrollContainerRef}
+          className="flex-1 overflow-y-auto relative bg-[#0D1117] custom-scrollbar"
+        >
           {currentUser.role === 'reseller' && (() => {
             const expiry = new Date(currentUser.expiryDate || '');
             const today = new Date();
@@ -495,33 +515,15 @@ const App: React.FC = () => {
             return null;
           })()}
 
-          {activeTab === 'dashboard' && <DashboardHome stats={stats} lists={lists} currentUser={currentUser} setCurrentUser={setCurrentUser} onNavigate={setActiveTab} />}
+          {activeTab === 'dashboard' && (
+            <div className="p-8">
+              <DashboardHome stats={stats} lists={lists} currentUser={currentUser} setCurrentUser={setCurrentUser} onNavigate={setActiveTab} />
+            </div>
+          )}
 
-          <div className={activeTab === 'dashboard' ? 'hidden' : 'p-6 animate-in fade-in duration-300 h-full'}>
-            {activeTab === 'lists' && (() => {
-              // Strict Expiry Check for Component Access
-              if (currentUser.role === 'admin') {
-                return (
-                  <ListManager
-                    lists={lists}
-                    setLists={setLists}
-                    currentUser={currentUser}
-                    resellers={resellers}
-                  />
-                );
-              }
-
-              const hasExpiry = currentUser.expiryDate && !isNaN(new Date(currentUser.expiryDate).getTime());
-              const isExpired = !hasExpiry || new Date(currentUser.expiryDate!).getTime() < new Date().getTime();
-
-              if (isExpired) return (
-                <div className="flex flex-col items-center justify-center h-full text-center space-y-4 animate-fade-in text-gray-400">
-                  <ShieldAlert size={64} className="text-red-500 mb-2" />
-                  <h2 className="text-2xl font-bold text-white">Acesso Bloqueado</h2>
-                  <p className="max-w-md">Sua licença expirou. Renove seu plano no menu Financeiro para acessar seus protocolos.</p>
-                </div>
-              );
-
+          {activeTab === 'lists' && (() => {
+            // Strict Expiry Check for Component Access
+            if (currentUser.role === 'admin') {
               return (
                 <ListManager
                   lists={lists}
@@ -530,70 +532,90 @@ const App: React.FC = () => {
                   resellers={resellers}
                 />
               );
-            })()}
-            {activeTab === 'resellers' && currentUser.role === 'admin' && (
-              <ResellerManager
-                resellers={resellers}
-                setResellers={setResellers}
-                lists={lists}
-                currentUser={currentUser}
-              />
-            )}
-            {activeTab === 'services' && (
-              <ServicesManager
-                services={services}
-                setServices={setServices}
-                currentUser={currentUser}
-                setCurrentUser={setCurrentUser}
-              />
-            )}
-            {activeTab === 'plans' && (
-              <PlanManager onPlanUpdate={() => fetchData()} currentUser={currentUser} />
-            )}
-            {activeTab === 'finance-deposits' && (
-              <Finance
-                currentUser={currentUser}
-                platformSettings={platformSettings}
-                setPlatformSettings={setPlatformSettings}
-                activeTab={activeTab} // Note: Finance prop name is generic 'activeTab' but it handles subtabs internally. This might be fine.
-                transactions={transactions}
-                setTransactions={setTransactions}
-                resellers={resellers}
-                setResellers={setResellers}
-                setCurrentUser={setCurrentUser}
-              />
-            )}
-            {activeTab === 'queries' && (
-              <Queries />
-            )}
-            {activeTab === 'creatives' && (() => {
-              if (currentUser.role === 'admin') return <CreativesManager currentUser={currentUser} />;
+            }
 
-              const hasExpiry = currentUser.expiryDate && !isNaN(new Date(currentUser.expiryDate).getTime());
-              const isExpired = !hasExpiry || new Date(currentUser.expiryDate!).getTime() < new Date().getTime();
-              const isPaidPlan = !!currentUser.planId;
-              const canAccess = !isExpired && isPaidPlan && currentUser.status === 'active';
-              return canAccess ? <CreativesManager currentUser={currentUser} /> : null;
-            })()}
-            {activeTab === 'tools' && (() => {
-              if (currentUser.role === 'admin') return <ToolsManager currentUser={currentUser} />;
+            const hasExpiry = currentUser.expiryDate && !isNaN(new Date(currentUser.expiryDate).getTime());
+            const isExpired = !hasExpiry || new Date(currentUser.expiryDate!).getTime() < new Date().getTime();
 
-              const hasExpiry = currentUser.expiryDate && !isNaN(new Date(currentUser.expiryDate).getTime());
-              const isExpired = !hasExpiry || new Date(currentUser.expiryDate!).getTime() < new Date().getTime();
-              const isPaidPlan = !!currentUser.planId;
-              const canAccess = !isExpired && isPaidPlan && currentUser.status === 'active';
-              return canAccess ? <ToolsManager currentUser={currentUser} /> : null;
-            })()}
-            {activeTab === 'support' && (
-              <div className="flex flex-col items-center justify-center h-full text-gray-500 gap-4">
-                <LifeBuoy size={48} className="opacity-50" />
-                <p className="text-lg font-['Outfit']">Suporte Técnico</p>
-                <a href="https://wa.me/558291414568" target="_blank" rel="noreferrer" className="bg-[#D99000] text-white px-6 py-2 rounded-lg hover:bg-[#b37600] transition-colors">
-                  Entrar em Contato
-                </a>
+            if (isExpired) return (
+              <div className="flex flex-col items-center justify-center h-full text-center space-y-4 animate-fade-in text-gray-400">
+                <ShieldAlert size={64} className="text-red-500 mb-2" />
+                <h2 className="text-2xl font-bold text-white">Acesso Bloqueado</h2>
+                <p className="max-w-md">Sua licença expirou. Renove seu plano no menu Financeiro para acessar seus protocolos.</p>
               </div>
-            )}
-          </div>
+            );
+
+            return (
+              <ListManager
+                lists={lists}
+                setLists={setLists}
+                currentUser={currentUser}
+                resellers={resellers}
+              />
+            );
+          })()}
+          {activeTab === 'resellers' && currentUser.role === 'admin' && (
+            <ResellerManager
+              resellers={resellers}
+              setResellers={setResellers}
+              lists={lists}
+              currentUser={currentUser}
+            />
+          )}
+          {activeTab === 'services' && (
+            <ServicesManager
+              services={services}
+              setServices={setServices}
+              currentUser={currentUser}
+              setCurrentUser={setCurrentUser}
+            />
+          )}
+          {activeTab === 'plans' && (
+            <PlanManager onPlanUpdate={() => fetchData()} currentUser={currentUser} />
+          )}
+          {activeTab === 'finance-deposits' && (
+            <Finance
+              currentUser={currentUser}
+              platformSettings={platformSettings}
+              setPlatformSettings={setPlatformSettings}
+              activeTab={activeTab} // Note: Finance prop name is generic 'activeTab' but it handles subtabs internally. This might be fine.
+              transactions={transactions}
+              setTransactions={setTransactions}
+              resellers={resellers}
+              setResellers={setResellers}
+              setCurrentUser={setCurrentUser}
+            />
+          )}
+          {activeTab === 'queries' && (
+            <Queries />
+          )}
+          {activeTab === 'creatives' && (() => {
+            if (currentUser.role === 'admin') return <CreativesManager currentUser={currentUser} />;
+
+            const hasExpiry = currentUser.expiryDate && !isNaN(new Date(currentUser.expiryDate).getTime());
+            const isExpired = !hasExpiry || new Date(currentUser.expiryDate!).getTime() < new Date().getTime();
+            const isPaidPlan = !!currentUser.planId;
+            const canAccess = !isExpired && currentUser.status === 'active';
+            return canAccess ? <CreativesManager currentUser={currentUser} /> : null;
+          })()}
+          {activeTab === 'tools' && (() => {
+            if (currentUser.role === 'admin') return <ToolsManager currentUser={currentUser} />;
+
+            const hasExpiry = currentUser.expiryDate && !isNaN(new Date(currentUser.expiryDate).getTime());
+            const isExpired = !hasExpiry || new Date(currentUser.expiryDate!).getTime() < new Date().getTime();
+            const isPaidPlan = !!currentUser.planId;
+            const canAccess = !isExpired && currentUser.status === 'active';
+            return canAccess ? <ToolsManager currentUser={currentUser} /> : null;
+          })()}
+          {activeTab === 'support' && (
+            <div className="flex flex-col items-center justify-center h-full text-gray-500 gap-4">
+              <LifeBuoy size={48} className="opacity-50" />
+              <p className="text-lg font-['Outfit']">Suporte Técnico</p>
+              <a href="https://wa.me/558291414568" target="_blank" rel="noreferrer" className="bg-[#D99000] text-white px-6 py-2 rounded-lg hover:bg-[#b37600] transition-colors">
+                Entrar em Contato
+              </a>
+            </div>
+          )}
         </div>
       </div>
     </div>
