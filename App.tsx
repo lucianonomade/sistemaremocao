@@ -327,7 +327,8 @@ const App: React.FC = () => {
                 const hasExpiry = currentUser.expiryDate && !isNaN(new Date(currentUser.expiryDate).getTime());
                 const isExpired = !hasExpiry || new Date(currentUser.expiryDate!).getTime() < new Date().getTime();
                 const isPaidPlan = !!currentUser.planId;
-                const canAccess = !isExpired && currentUser.status === 'active';
+                // Require Paid Plan for these tools as well
+                const canAccess = !isExpired && currentUser.status === 'active' && isPaidPlan;
 
                 if (canAccess) {
                   return (
@@ -341,12 +342,12 @@ const App: React.FC = () => {
                 return (
                   <>
                     <div className="opacity-50 pointer-events-none relative group">
-                      <SidebarLink icon={Wrench} label="Ferramentas (Premium)" tabId="ignore" />
-                      <div className="absolute right-4 top-3 text-[10px] font-black uppercase text-[#B8860B] tracking-widest bg-[#161B22] px-2 py-0.5 rounded border border-[#B8860B]/30">Vencido</div>
+                      <SidebarLink icon={Wrench} label="Ferramentas" tabId="ignore" />
+                      <div className="absolute right-4 top-3 text-[10px] font-black uppercase text-[#B8860B] tracking-widest bg-[#161B22] px-2 py-0.5 rounded border border-[#B8860B]/30">{isExpired ? 'Vencido' : 'Premium'}</div>
                     </div>
                     <div className="opacity-50 pointer-events-none relative group">
-                      <SidebarLink icon={ImageIcon} label="Criativos (Premium)" tabId="ignore" />
-                      <div className="absolute right-4 top-3 text-[10px] font-black uppercase text-[#B8860B] tracking-widest bg-[#161B22] px-2 py-0.5 rounded border border-[#B8860B]/30">Vencido</div>
+                      <SidebarLink icon={ImageIcon} label="Criativos" tabId="ignore" />
+                      <div className="absolute right-4 top-3 text-[10px] font-black uppercase text-[#B8860B] tracking-widest bg-[#161B22] px-2 py-0.5 rounded border border-[#B8860B]/30">{isExpired ? 'Vencido' : 'Premium'}</div>
                     </div>
                   </>
                 );
@@ -595,7 +596,7 @@ const App: React.FC = () => {
             const hasExpiry = currentUser.expiryDate && !isNaN(new Date(currentUser.expiryDate).getTime());
             const isExpired = !hasExpiry || new Date(currentUser.expiryDate!).getTime() < new Date().getTime();
             const isPaidPlan = !!currentUser.planId;
-            const canAccess = !isExpired && currentUser.status === 'active';
+            const canAccess = !isExpired && currentUser.status === 'active' && isPaidPlan;
             return canAccess ? <CreativesManager currentUser={currentUser} /> : null;
           })()}
           {activeTab === 'tools' && (() => {
@@ -604,7 +605,7 @@ const App: React.FC = () => {
             const hasExpiry = currentUser.expiryDate && !isNaN(new Date(currentUser.expiryDate).getTime());
             const isExpired = !hasExpiry || new Date(currentUser.expiryDate!).getTime() < new Date().getTime();
             const isPaidPlan = !!currentUser.planId;
-            const canAccess = !isExpired && currentUser.status === 'active';
+            const canAccess = !isExpired && currentUser.status === 'active' && isPaidPlan;
             return canAccess ? <ToolsManager currentUser={currentUser} /> : null;
           })()}
           {activeTab === 'support' && (
