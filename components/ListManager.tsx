@@ -365,6 +365,27 @@ const ListManager: React.FC<ListManagerProps> = ({ lists, setLists, currentUser,
     }
   };
 
+  // Batch delete: removes all lists belonging to a batch
+  const handleDeleteBatch = async (batchId: string) => {
+    if (!confirm(`ATENÇÃO: Deseja excluir TODOS os protocolos do lote ${batchId}? Esta ação é irreversível.`)) {
+      return;
+    }
+    const batchLists = lists.filter(l => l.batchId === batchId);
+    try {
+      // Delete each list sequentially (could be parallel but keep simple)
+      for (const l of batchLists) {
+        const res = await fetch(`/api/lists/${l.id}`, { method: 'DELETE' });
+        if (!res.ok) throw new Error(`Falha ao excluir protocolo ${l.id}`);
+      }
+      // Remove them from state
+      setLists(prev => prev.filter(l => l.batchId !== batchId));
+      alert('Lote excluído com sucesso!');
+    } catch (err) {
+      console.error(err);
+      alert('Erro ao excluir lote');
+    }
+  };
+
   const handleBatchDownload = async () => {
     // @ts-ignore
     if (!window.XLSX) {
@@ -827,13 +848,22 @@ const ListManager: React.FC<ListManagerProps> = ({ lists, setLists, currentUser,
                     </h4>
                     <p className="text-sm font-bold text-gray-400 uppercase tracking-widest">{displayName}</p>
                     {isBatch && (
-                      <button
-                        onClick={() => setSelectedBatch(item)}
-                        className="mt-2 text-[10px] font-black text-[#B8860B] hover:text-[#9a7009] uppercase tracking-wider flex items-center gap-1 transition-colors"
-                      >
-                        <ListChecks size={14} />
-                        Ver CPFs do Lote
-                      </button>
+                      <>
+                        <button
+                          onClick={() => setSelectedBatch(item)}
+                          className="mt-2 text-[10px] font-black text-[#B8860B] hover:text-[#9a7009] uppercase tracking-wider flex items-center gap-1 transition-colors"
+                        >
+                          <ListChecks size={14} />
+                          Ver CPFs do Lote
+                        </button>
+                        <button
+                          onClick={() => handleDeleteBatch(item.batchId)}
+                          className="mt-2 ml-2 text-[10px] font-black text-red-500 hover:text-red-700 uppercase tracking-wider flex items-center gap-1 transition-colors"
+                        >
+                          <Trash2 size={14} />
+                          Excluir Lote
+                        </button>
+                      </>
                     )}
                   </div>
                   <div className="flex items-center gap-2">

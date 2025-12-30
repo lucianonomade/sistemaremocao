@@ -88,6 +88,10 @@ const ResellerManager: React.FC<ResellerManagerProps> = ({ resellers, setReselle
     }
   };
 
+  const [clientModalOpen, setClientModalOpen] = React.useState(false);
+  const [selectedResellerId, setSelectedResellerId] = React.useState<string | null>(null);
+  const [selectedResellerName, setSelectedResellerName] = React.useState<string>('');
+
   const handleDelete = async (id: string, name: string) => {
     if (!confirm(`Tem certeza que deseja EXCLUIR permanentemente o parceiro ${name}? Esta ação não pode ser desfeita e removerá todos os dados vinculados.`)) return;
 
@@ -100,6 +104,31 @@ const ResellerManager: React.FC<ResellerManagerProps> = ({ resellers, setReselle
 
       setResellers(prev => prev.filter(r => r.id !== id));
       alert('Parceiro removido com sucesso!');
+    } catch (err: any) {
+      alert(err.message);
+    }
+  };
+
+  // Open modal showing this reseller's clients
+  const openClientModal = (resellerId: string, resellerName: string) => {
+    setSelectedResellerId(resellerId);
+    setSelectedResellerName(resellerName);
+    setClientModalOpen(true);
+  };
+
+  const closeClientModal = () => {
+    setClientModalOpen(false);
+    setSelectedResellerId(null);
+    setSelectedResellerName('');
+  };
+
+  const handleDeleteClient = async (listId: string) => {
+    if (!confirm('Tem certeza que deseja excluir este protocolo?')) return;
+    try {
+      const response = await fetch(`/api/lists/${listId}`, { method: 'DELETE' });
+      if (!response.ok) throw new Error('Erro ao excluir protocolo');
+      setLists(prev => prev.filter(l => l.id !== listId));
+      alert('Protocolo excluído com sucesso!');
     } catch (err: any) {
       alert(err.message);
     }
