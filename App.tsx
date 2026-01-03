@@ -564,6 +564,7 @@ const App: React.FC = () => {
               resellers={resellers}
               setResellers={setResellers}
               lists={lists}
+              setLists={setLists}
               currentUser={currentUser}
             />
           )}
@@ -624,7 +625,7 @@ const App: React.FC = () => {
             <div className="flex flex-col items-center justify-center h-full text-gray-500 gap-4">
               <LifeBuoy size={48} className="opacity-50" />
               <p className="text-lg font-['Outfit']">Suporte Técnico</p>
-              <a href="https://wa.me/558291414568" target="_blank" rel="noreferrer" className="bg-[#D99000] text-white px-6 py-2 rounded-lg hover:bg-[#b37600] transition-colors">
+              <a href="https://wa.me/5582994005430" target="_blank" rel="noreferrer" className="bg-[#D99000] text-white px-6 py-2 rounded-lg hover:bg-[#b37600] transition-colors">
                 Entrar em Contato
               </a>
             </div>

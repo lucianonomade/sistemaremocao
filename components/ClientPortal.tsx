@@ -18,8 +18,9 @@ const ClientPortal: React.FC<ClientPortalProps> = ({ currentUser, onLogout, list
   const resellerServices = services.filter(s => s.resellerId === reseller?.id && s.isActive);
 
   const handleSupportClick = () => {
-    const cleanPhone = (reseller?.whatsapp || '5511999999999').replace(/\D/g, '');
-    const text = encodeURIComponent(`Olá, sou o cliente ${currentUser.name} e gostaria de suporte sobre meu processo de limpeza ID: ${list?.id || 'NOVO'}`);
+    // Point 10 & 11: Use bot number and specific message
+    const cleanPhone = '5582994005430';
+    const text = encodeURIComponent(`Olá, sou o cliente ${currentUser.name}. Gostaria de informações sobre o andamento do meu processo (ID: ${list?.id || 'N/A'}).`);
     window.open(`https://wa.me/${cleanPhone}?text=${text}`, '_blank');
   };
 
@@ -65,10 +66,10 @@ const ClientPortal: React.FC<ClientPortalProps> = ({ currentUser, onLogout, list
         {/* Welcome Section */}
         <div className="text-center mb-8 animate-in slide-in-from-bottom-5 duration-700">
           <h1 className="font-extrabold text-5xl md:text-6xl text-white mb-2 tracking-tight">
-            Olá, <span className="text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-400">{currentUser.name.split(' ')[0]}</span>
+            Olá, <span className="text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-400">{currentUser.name}</span>
           </h1>
           <p className="text-xs md:text-sm font-bold tracking-[0.2em] text-gray-500 uppercase">
-            Acompanhe sua blindagem real
+            Acompanhe seu processo real
           </p>
         </div>
 
@@ -82,7 +83,7 @@ const ClientPortal: React.FC<ClientPortalProps> = ({ currentUser, onLogout, list
               { name: 'BOA VISTA SCPC', completed: list?.organs.boaVista, key: 'boaVista' as const },
               { name: 'SPC BRASIL', completed: list?.organs.spc, key: 'spc' as const },
               { name: 'CENPROT NACIONAL', completed: list?.organs.cenprotNacional, key: 'cenprotNacional' as const },
-              { name: 'CENPROT SP (CARTÓRIOS)', completed: list?.organs.cenprotSP, key: 'cenprotSP' as const }
+              { name: 'CENPROT SÃO PAULO', completed: list?.organs.cenprotSP, key: 'cenprotSP' as const }
             ].map((organ, idx) => {
               const organProgress = list ? calculateOrganProgress(list.startDate, organ.completed || false, idx) : 0;
               return (

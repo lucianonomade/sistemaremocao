@@ -32,6 +32,8 @@ export interface Reseller {
   usageDays?: number;
   pixKey?: string;
   parentId?: string;
+  totalRegistrations?: number; // Added for Point 2
+  estimatedCommission?: number; // Added for Point 1
   paymentConfig?: {
     pixKey?: string;
     pixQrCode?: string;
@@ -55,7 +57,8 @@ export interface OrganStatus {
 export interface CreditList {
   id: string;
   resellerId: string;
-  clientDocument?: string;
+  resellerName?: string; // Added for Point 3
+  clientDocument: string;
   clientName?: string;
   startDate: string;
   manualConclusion: boolean;

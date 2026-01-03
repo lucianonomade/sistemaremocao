@@ -186,7 +186,7 @@ app.post('/api/auth/register', async (req, res) => {
 app.get('/api/lists', async (req, res) => {
   const { userId, role, doc } = req.query;
 
-  let query = supabase.from('credit_lists').select('*, organs_status(*)');
+  let query = supabase.from('credit_lists').select('*, organs_status(*), profiles:reseller_id(name)');
 
   if (role === 'reseller') {
     query = query.eq('reseller_id', userId);
@@ -226,6 +226,7 @@ app.get('/api/lists', async (req, res) => {
       manualConclusion: !!l.manual_conclusion,
       status: l.status || 'processing',
       clientName: l.client_name || 'Cliente',
+      resellerName: l.profiles?.name || 'Sistema', // Point 3: Track source
       batchId: l.batch_id,
       organs: {
         serasa: !!organsRecord?.serasa,
@@ -387,6 +388,21 @@ app.get('/api/resellers', async (req, res) => {
   const { data, error } = await query;
   if (error) return res.status(400).json({ error: error.message });
 
+  // Point 2: Get counts for all resellers
+  // We fetch just the reseller_id from credit_lists to count them locally
+  const { data: listsData } = await supabase
+    .from('credit_lists')
+    .select('reseller_id');
+
+  const counts = {};
+  if (listsData) {
+    listsData.forEach(l => {
+      if (l.reseller_id) {
+        counts[l.reseller_id] = (counts[l.reseller_id] || 0) + 1;
+      }
+    });
+  }
+
   const mapping = (r) => ({
     id: r.id,
     name: r.name,
@@ -402,7 +418,9 @@ app.get('/api/resellers', async (req, res) => {
     status: r.status,
     balance: parseFloat(r.balance || 0),
     pixKey: r.pix_key,
-    parentId: r.parent_id
+    parentId: r.parent_id,
+    totalRegistrations: counts[r.id] || 0, // Point 2: Count of lists
+    estimatedCommission: (counts[r.id] || 0) * (r.plans?.commission_rate !== undefined ? parseFloat(r.plans.commission_rate) : 40) // Point 1: Use plan rate or default 40
   });
 
   res.json(data.map(mapping));

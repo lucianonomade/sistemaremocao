@@ -576,6 +576,11 @@ const ListManager: React.FC<ListManagerProps> = ({ lists, setLists, currentUser,
             </div>
             <div>
               <h3 className="text-xl font-black">{currentUser.role === 'admin' ? 'Gestão Master de Protocolos' : 'Meus Protocolos Ativos'}</h3>
+              {currentUser.role === 'admin' && (
+                <span className="text-[10px] bg-[#21262d] text-gray-400 px-2 py-1 rounded-md border border-gray-700">
+                  Visualizando origens de revendedores
+                </span>
+              )}
               <p className="text-xs text-[#8B949E] font-bold uppercase tracking-widest">Acompanhamento e Baixa Manual Habilitada</p>
             </div>
           </div>
@@ -637,8 +642,8 @@ const ListManager: React.FC<ListManagerProps> = ({ lists, setLists, currentUser,
 
         {/* Download Modal */}
         {isDownloadModalOpen && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-300">
-            <div className="bg-[#161B22] border border-[#30363D] rounded-[2rem] w-full max-w-lg p-5 shadow-2xl animate-in zoom-in-95 relative flex flex-col max-h-[85vh]">
+          <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-300 overflow-y-auto">
+            <div className="bg-[#161B22] border border-[#30363D] rounded-[2rem] w-full max-w-lg p-5 shadow-2xl animate-in zoom-in-95 relative flex flex-col max-h-[85vh] my-auto">
               <button onClick={() => setIsDownloadModalOpen(false)} className="absolute top-4 right-4 text-[#8B949E] hover:text-white"><AlertCircle className="rotate-45" size={20} /></button>
 
 
@@ -893,6 +898,16 @@ const ListManager: React.FC<ListManagerProps> = ({ lists, setLists, currentUser,
 
 
 
+
+                {
+                  currentUser.role === 'admin' && !isBatch && item.resellerName && (
+                    <div className="mt-2 mb-2 px-3 py-1 bg-[#21262d] rounded-lg border border-[#30363D] inline-flex items-center gap-2">
+                      <span className="text-[9px] font-bold text-gray-500 uppercase tracking-widest">Parceiro Inviter:</span>
+                      <span className="text-xs font-bold text-[#B8860B]">{item.resellerName}</span>
+                    </div>
+                  )
+                }
+
                 <div className="p-6 bg-[#0D1117] rounded-3xl border border-[#30363D] space-y-4">
                   <div className="flex justify-between items-end">
                     <div className="flex items-center gap-2">
@@ -991,7 +1006,7 @@ const ListManager: React.FC<ListManagerProps> = ({ lists, setLists, currentUser,
           )}
         </div>
       </div>
-    </div>
+    </div >
   );
 };
 

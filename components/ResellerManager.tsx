@@ -7,10 +7,11 @@ interface ResellerManagerProps {
   resellers: Reseller[];
   setResellers: React.Dispatch<React.SetStateAction<Reseller[]>>;
   lists: CreditList[];
+  setLists: React.Dispatch<React.SetStateAction<CreditList[]>>; // Added for delete logic
   currentUser: User;
 }
 
-const ResellerManager: React.FC<ResellerManagerProps> = ({ resellers, setResellers, lists, currentUser }) => {
+const ResellerManager: React.FC<ResellerManagerProps> = ({ resellers, setResellers, lists, setLists, currentUser }) => {
   const [isModalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
@@ -153,6 +154,7 @@ const ResellerManager: React.FC<ResellerManagerProps> = ({ resellers, setReselle
               <tr>
                 <th className="px-8 py-5 text-[10px] font-black text-[#8B949E] uppercase tracking-widest">Identificação</th>
                 <th className="px-8 py-5 text-[10px] font-black text-[#8B949E] uppercase tracking-widest">Acesso & Senha</th>
+                <th className="px-8 py-5 text-[10px] font-black text-[#8B949E] uppercase tracking-widest text-center">Cadastros (Comissão)</th>
                 <th className="px-8 py-5 text-[10px] font-black text-[#8B949E] uppercase tracking-widest">Vencimento</th>
                 <th className="px-8 py-5 text-[10px] font-black text-[#8B949E] uppercase tracking-widest text-center">Ações</th>
               </tr>
@@ -172,6 +174,14 @@ const ResellerManager: React.FC<ResellerManagerProps> = ({ resellers, setReselle
                       </div>
                     </div>
                     {r.pixKey && <p className="text-[9px] text-[#B8860B] mt-1 font-bold">PIX: {r.pixKey}</p>}
+                  </td>
+                  <td className="px-8 py-5 text-center">
+                    <div className="flex flex-col items-center">
+                      <span className="text-sm font-black text-white">{r.totalRegistrations || 0}</span>
+                      <span className="text-[10px] font-bold text-green-500">
+                        {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(r.estimatedCommission || 0)}
+                      </span>
+                    </div>
                   </td>
                   <td className="px-8 py-5">
                     <div className="flex items-center gap-2 text-xs font-bold text-[#8B949E]">

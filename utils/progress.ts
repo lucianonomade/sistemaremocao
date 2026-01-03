@@ -49,9 +49,9 @@ export const calculateOrganProgress = (startDateStr: string, active: boolean, or
   const seed = startDate.getTime() + (organIndex * 12345);
   const randomFactor = pseudoRandom(seed); // 0.0 to 1.0
 
-  // Range: 7 to 30 days
-  const minDays = 7;
-  const maxDays = 30;
+  // Range: 15 to 90 days (User requested 90 business days baseline)
+  const minDays = 15;
+  const maxDays = 90;
   const targetBusinessDays = Math.floor(minDays + (randomFactor * (maxDays - minDays)));
 
   // 2. Count actual business days passed
@@ -95,7 +95,7 @@ export const calculateListProgress = (startDateStr: string, isManual: boolean, o
   const startDate = new Date(startDateStr);
   const now = new Date();
   const businessDaysPassed = countBusinessDays(startDate, now);
-  const genericTarget = 20;
+  const genericTarget = 60;
   let progress = Math.floor((businessDaysPassed / genericTarget) * 97);
 
   return Math.min(97, Math.max(0, progress));
@@ -103,9 +103,9 @@ export const calculateListProgress = (startDateStr: string, isManual: boolean, o
 
 export const getTimelineData = (startDateStr: string) => {
   const start = new Date(startDateStr);
-  // Default estimate of ~45 calendar days to be safe in the UI text (approx 30 business days)
+  // Default estimate of ~120 calendar days to be safe in the UI text (approx 90 business days)
   const end = new Date(start);
-  end.setDate(start.getDate() + 45);
+  end.setDate(start.getDate() + 120);
 
   const now = new Date();
   const daysPassed = Math.floor((now.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));

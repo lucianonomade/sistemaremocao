@@ -51,7 +51,7 @@ const CreativesManager: React.FC<CreativesManagerProps> = ({ currentUser }) => {
     type: 'image' as 'image' | 'pdf' | 'video'
   });
 
-  const categories = ['Todos', 'Banners Instagram', 'Tabela de Preços', 'Vídeos Treinamento', 'Geral'];
+  const categories = ['Todos', 'Limpa Nome', 'Jusbrasil', 'Escavador', 'Bacen', 'Banners Instagram', 'Tabela de Preços', 'Vídeos Treinamento', 'Geral'];
 
   const filteredMaterials = (Array.isArray(materials) ? materials : []).filter(m => {
     const matchesSearch = m.name?.toLowerCase().includes(searchTerm.toLowerCase());
