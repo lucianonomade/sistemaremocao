@@ -154,7 +154,7 @@ const ResellerManager: React.FC<ResellerManagerProps> = ({ resellers, setReselle
               <tr>
                 <th className="px-8 py-5 text-[10px] font-black text-[#8B949E] uppercase tracking-widest">Identificação</th>
                 <th className="px-8 py-5 text-[10px] font-black text-[#8B949E] uppercase tracking-widest">Acesso & Senha</th>
-                <th className="px-8 py-5 text-[10px] font-black text-[#8B949E] uppercase tracking-widest text-center">Cadastros (Comissão)</th>
+                <th className="px-8 py-5 text-[10px] font-black text-[#8B949E] uppercase tracking-widest text-center">Indicações (Comissão)</th>
                 <th className="px-8 py-5 text-[10px] font-black text-[#8B949E] uppercase tracking-widest">Vencimento</th>
                 <th className="px-8 py-5 text-[10px] font-black text-[#8B949E] uppercase tracking-widest text-center">Ações</th>
               </tr>
